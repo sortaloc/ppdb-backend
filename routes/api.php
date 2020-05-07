@@ -68,9 +68,31 @@ Route::prefix('Ref')->group(function () {
 Route::prefix('Otentikasi')->group(function () {
 	Route::post('masuk', 'PenggunaController@authenticate');
 	Route::post('getPengguna', 'PenggunaController@getPengguna');
+	Route::get('getPengguna', 'PenggunaController@getPengguna');
 	Route::post('simpanPengguna', 'PenggunaController@simpanPengguna');
 	Route::post('buatPengguna', 'PenggunaController@buatPengguna');
 	Route::post('upload', 'PenggunaController@upload');
+});
+
+Route::prefix('PesertaDidik')->group(function(){
+	Route::get('get', 'PesertaDidikController@index'); // params: { limit,offset,searchText(nisn,nama, nik) }
+});
+
+Route::prefix('Sekolah')->group(function(){
+	Route::get('get', 'SekolahController@index'); // params: { limit,offset,searchText(nisn,nama) }
+});
+
+Route::prefix('Pilihsekolah')->group(function(){
+	Route::get('get', 'PilihsekolahController@index'); // params: { limit,offset) }
+});
+
+Route::prefix('CalonPesertaDidik')->group(function(){
+	Route::get('get', 'CalonPesertaDidikController@index'); // params: { limit,offset) }
+	Route::post('save', 'CalonPesertaDidik@store'); // params: { 'kolom2_calon_pd' }
+});
+
+Route::prefix('BerkasCalon')->group(function(){
+	Route::get('get', 'BerkasCalonController@index'); // params: { limit,offset) }
 });
 
 Route::get('/clear-cache', function() {
