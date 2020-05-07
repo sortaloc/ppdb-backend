@@ -15,15 +15,21 @@ class SekolahController extends Controller
 
         $count = DB::connection('sqlsrv_2')->table('ppdb.sekolah')->where('soft_delete', 0);
         $sekolahs = DB::connection('sqlsrv_2')
-        	->table('ppdb.sekolah')
-        	->where('soft_delete', 0)
+            ->table('ppdb.sekolah as sekolah')
+            ->join('ref.bentuk_pendidikan as bp','bp.bentuk_pendidikan_id','=','sekolah.bentuk_pendidikan_id')
+        	->where('sekolah.soft_delete', 0)
         	->limit($limit)
-        	->offset($offset)
-        	->orderBy('create_date', 'DESC');
+            ->offset($offset)
+            ->select(
+                'sekolah.*',
+                'bp.nama as bentuk',
+                DB::raw("(case when sekolah.status_sekolah = 1 then 'Negeri' else 'Swasta' end) as status")
+            )
+        	->orderBy('sekolah.nama', 'ASC');
 
         if($searchText){
-        	$count = $count->where('npsn', 'like', '%'.$searchText.'%')->orWhere('nama', 'like', '%'.$searchText.'%');
-        	$sekolahs = $sekolahs->where('npsn', 'like', '%'.$searchText.'%')->orWhere('nama', 'like', '%'.$searchText.'%');
+        	$count = $count->where('sekolah.npsn', 'ilike', '%'.$searchText.'%')->orWhere('sekolah.nama', 'ilike', '%'.$searchText.'%');
+        	$sekolahs = $sekolahs->where('sekolah.npsn', 'ilike', '%'.$searchText.'%')->orWhere('sekolah.nama', 'ilike', '%'.$searchText.'%');
         }
 
         $count = $count->count();
@@ -31,7 +37,7 @@ class SekolahController extends Controller
 
         return response(
             [
-                'data' => $sekolahs,
+                'rows' => $sekolahs,
                 'count' => count($sekolahs),
                 'countAll' => $count
             ],
