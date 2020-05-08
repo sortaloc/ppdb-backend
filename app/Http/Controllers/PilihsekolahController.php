@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
+use App\PilihanSekolah;
 use DB;
 
 class PilihsekolahController extends Controller
@@ -11,28 +13,32 @@ class PilihsekolahController extends Controller
     {
     	$limit = $request->limit ? $request->limit : 10;
         $offset = $request->page ? ($request->page * $limit) : 0;
+        $calon_pd = $request->calon_peserta_didik_id ? $request->calon_peserta_didik_id : null;
 
-        $count_all = DB::connection('sqlsrv_2')->table('ppdb.pilihan_sekolah')->where('soft_delete', 0);
-        $sekolahs = DB::connection('sqlsrv_2')
-        	->table('ppdb.pilihan_sekolah AS pilihan_sekolah')
-        	->select(
-        		'pilihan_sekolah.*',
+        $count = PilihanSekolah::where('soft_delete', 0);
+        $pilihan_sekolah = PilihanSekolah::select(
+        		'ppdb.pilihan_sekolah.*',
         		'sekolah.nama AS nama_sekolah'
         	)
-        	->leftJoin('ppdb.sekolah AS sekolah', 'pilihan_sekolah.sekolah_id', '=', 'sekolah.sekolah_id')
-        	->where('pilihan_sekolah.soft_delete', 0)
+        	->leftJoin('ppdb.sekolah AS sekolah', 'ppdb.pilihan_sekolah.sekolah_id', '=', 'sekolah.sekolah_id')
+        	->where('ppdb.pilihan_sekolah.soft_delete', 0)
         	->limit($limit)
         	->offset($offset)
-        	->orderBy('pilihan_sekolah.create_date', 'DESC');
+        	->orderBy('ppdb.pilihan_sekolah.urut_pilihan', 'ASC');
 
-        $count_all = $count_all->count();
-        $sekolahs = $sekolahs->get();
+        if($request->calon_peserta_didik_id){
+            $count = $count->where('calon_peserta_didik_id', $calon_pd);
+            $pilihan_sekolah = $pilihan_sekolah->where('calon_peserta_didik_id', $calon_pd);
+        }
+
+        $count = $count->count();
+        $pilihan_sekolah = $pilihan_sekolah->get();
 
         return response(
             [
-                'data' => $sekolahs,
-                'count' => count($sekolahs),
-                'count_all' => $count_all
+                'rows' => $pilihan_sekolah,
+                'count' => count($pilihan_sekolah),
+                'countAll' => $count
             ],
             200
         );
@@ -40,7 +46,45 @@ class PilihsekolahController extends Controller
 
     public function store(Request $request)
     {
-        $sekolah_id = $request->sekolah_id;
-        $calon_pd_id = $request->calon_peserta_didik_id;
+        $uuid   = Str::uuid();
+        $pilihan_id  = $request->pilihan_sekolah_id ? $request->pilihan_sekolah_id : null;
+        $data   = $request->all();
+
+        $data['soft_delete'] = 0;
+        $msg = '';
+
+        if($pilihan_id){
+            $cek = PilihanSekolah::where('pilihan_sekolah_id', $pilihan_id)
+                ->where('soft_delete', 0)
+                ->count();
+        }else{
+            $cek = 0;
+        }
+
+        if($cek != 0){
+            $pilihan_sekolah = PilihanSekolah::where('pilihan_sekolah_id', $pilihan_id)
+                ->update($data);
+            $pilihan_sekolah = PilihanSekolah::find($pilihan_id)->first();
+        }else{
+            $cek_duplikast = PilihanSekolah::where('calon_peserta_didik_id', $request->calon_peserta_didik_id)->where('sekolah_id', $request->sekolah_id)->count();
+
+            if($cek_duplikast == 1){
+                $msg = "sekolah_sudah_dipilih";
+                $pilihan_sekolah = [];
+            }else{
+                $data['pilihan_sekolah_id'] = $pilihan_id ? $pilihan_id : $uuid;
+                $data['urut_pilihan'] = (PilihanSekolah::where('calon_peserta_didik_id', $request->calon_peserta_didik_id)->count() + 1);            
+                $pilihan_sekolah = PilihanSekolah::create($data);
+            }
+        }
+
+        return response([ 'rows' => $pilihan_sekolah, 'msg' => $msg ], 201);
+    }
+
+    public function destroy($id)
+    {
+        $pilihan_sekolah = PilihanSekolah::where('pilihan_sekolah_id', $id)->update(['soft_delete' => 1]);
+
+        return response([ 'rows' => $pilihan_sekolah ], 200);
     }
 }

@@ -63,6 +63,7 @@ Route::prefix('Ref')->group(function () {
 	Route::post('getJenjang', 'RefController@getJenjang');
 	Route::post('getTingkatPendidikan', 'RefController@getTingkatPendidikan');
 	Route::post('getMataPelajaran', 'RefController@getMataPelajaran');
+	Route::get('getJalur', 'RefController@getJalur');
 });
 
 Route::prefix('Otentikasi')->group(function () {
@@ -84,11 +85,15 @@ Route::prefix('Sekolah')->group(function(){
 
 Route::prefix('Pilihsekolah')->group(function(){
 	Route::get('get', 'PilihsekolahController@index'); // params: { limit,offset) }
+	Route::post('save', 'PilihsekolahController@store'); // params: { 'kolom2_pilihan_sekolah' }
+	Route::get('delete/{id}', 'PilihsekolahController@destroy'); // .../delete/a7109cd3-8307-4647-9608-2b665df3ba9f
 });
 
 Route::prefix('CalonPesertaDidik')->group(function(){
-	Route::get('get', 'CalonPesertaDidikController@index'); // params: { limit,offset) }
-	Route::post('save', 'CalonPesertaDidik@store'); // params: { 'kolom2_calon_pd' }
+	Route::get('get', 'CalonPesertaDidikController@index'); // params: { limit,offset, calon_peserta_didik_id }
+	Route::post('save', 'CalonPesertaDidikController@store'); // params: { 'kolom2_calon_pd' }
+	Route::get('delete/{id}', 'CalonPesertaDidikController@destroy'); // .../delete/a7109cd3-8307-4647-9608-2b665df3ba9f
+	Route::get('print/{id}', 'CalonPesertaDidikController@print'); // .../print/a7109cd3-8307-4647-9608-2b665df3ba9f
 });
 
 Route::prefix('BerkasCalon')->group(function(){

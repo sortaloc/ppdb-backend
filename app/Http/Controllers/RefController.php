@@ -3,8 +3,9 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use DB;
 use Illuminate\Support\Str;
+use App\Jalur;
+use DB;
 
 class RefController extends Controller
 {
@@ -61,5 +62,23 @@ class RefController extends Controller
         $return['rows'] = $fetch;
 
         return $return;
+    }
+
+    public function getJalur(Request $request)
+    {
+        $jalur = Jalur::where('level_jalur', 1)->get();
+
+        $i = 0;
+        foreach ($jalur as $key) {
+            $sub = Jalur::where('induk_jalur_id', $key->jalur_id);
+
+            if($sub->count() != 0){
+                $jalur[$i]->children = $sub->get();
+            }
+
+            $i++;
+        }
+
+        return $jalur;
     }
 }
