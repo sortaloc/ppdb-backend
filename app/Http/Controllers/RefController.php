@@ -98,7 +98,7 @@ class RefController extends Controller
             $mst_wilayah = $mst_wilayah->where('mst_kode_wilayah', $request->mst_kode_wilayah);
         }
 
-        $mst_wilayah = $mst_wilayah->limit(10)->get();
+        $mst_wilayah = $mst_wilayah->get();
 
         return Response(
             [
