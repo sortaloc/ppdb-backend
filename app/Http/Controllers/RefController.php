@@ -81,4 +81,31 @@ class RefController extends Controller
 
         return $jalur;
     }
+
+    public function getmst_wilayah(Request $request)
+    {
+        $mst_wilayah = DB::connection('sqlsrv_2')->table('ref.mst_wilayah');
+
+        if($request->id_level_wilayah){
+            $mst_wilayah = $mst_wilayah->where('id_level_wilayah', $request->id_level_wilayah);
+        }
+
+        if($request->kode_wilayah){
+            $mst_wilayah = $mst_wilayah->where('kode_wilayah', $request->kode_wilayah);
+        }
+
+        if($request->mst_kode_wilayah){
+            $mst_wilayah = $mst_wilayah->where('mst_kode_wilayah', $request->mst_kode_wilayah);
+        }
+
+        $mst_wilayah = $mst_wilayah->limit(10)->get();
+
+        return Response(
+            [
+                'rows' => $mst_wilayah,
+                'count' => count($mst_wilayah)
+            ],
+            200
+        );
+    }
 }

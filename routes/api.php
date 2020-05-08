@@ -64,6 +64,7 @@ Route::prefix('Ref')->group(function () {
 	Route::post('getTingkatPendidikan', 'RefController@getTingkatPendidikan');
 	Route::post('getMataPelajaran', 'RefController@getMataPelajaran');
 	Route::get('getJalur', 'RefController@getJalur');
+	Route::post('mst_wilayah', 'RefController@getmst_wilayah');
 });
 
 Route::prefix('Otentikasi')->group(function () {
