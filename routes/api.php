@@ -95,6 +95,7 @@ Route::prefix('CalonPesertaDidik')->group(function(){
 	Route::post('save', 'CalonPesertaDidikController@store'); // params: { 'kolom2_calon_pd' }
 	Route::get('delete/{id}', 'CalonPesertaDidikController@destroy'); // .../delete/a7109cd3-8307-4647-9608-2b665df3ba9f
 	Route::get('print/{id}', 'CalonPesertaDidikController@print'); // .../print/a7109cd3-8307-4647-9608-2b665df3ba9f
+	Route::post('importDariPesertaDidikDapodik', 'CalonPesertaDidikController@importDariPesertaDidikDapodik'); // params: { 'kolom2_calon_pd' }
 });
 
 Route::prefix('BerkasCalon')->group(function(){
