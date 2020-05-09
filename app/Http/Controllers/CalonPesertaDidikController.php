@@ -16,15 +16,16 @@ class CalonPesertaDidikController extends Controller
 		$limit = $request->limit ? $request->limit : 10;
 	    $offset = $request->page ? ($request->page * $limit) : 0;
 	    $calon_peserta_didik_id = $request->calon_peserta_didik_id ? $request->calon_peserta_didik_id : null;
+	    $searchText = $request->searchText ? $request->searchText : null;
 
 	    $count = CalonPD::where('ppdb.calon_peserta_didik.soft_delete', 0);
 		$calonPDs = CalonPD::where('ppdb.calon_peserta_didik.soft_delete', 0)
-			->join('pengguna','pengguna.pengguna_id','=','ppdb.calon_peserta_didik.pengguna_id')
+			->leftJoin('ppdb.sekolah AS sekolah', 'ppdb.calon_peserta_didik.asal_sekolah_id', '=', 'sekolah.sekolah_id')
 	    	->limit($limit)
 			->offset($offset)
 			->select(
 				'ppdb.calon_peserta_didik.*',
-				'pengguna.nama as nama_pengguna'
+				'sekolah.nama AS sekolah_asal'
 			)
 			->orderBy('ppdb.calon_peserta_didik.create_date', 'DESC');
 			
@@ -33,11 +34,31 @@ class CalonPesertaDidikController extends Controller
 			$calonPDs->where('ppdb.calon_peserta_didik.calon_peserta_didik_id','=',$calon_peserta_didik_id);
 		}
 
+		if($searchText != null){
+			$count->where('ppdb.calon_peserta_didik.nik', 'like', '%'.$searchText.'%');
+			$calonPDs->where('ppdb.calon_peserta_didik.nik', 'like', '%'.$searchText.'%');
+		}
+
 	    $count = $count->count();
 		$calonPDs = $calonPDs->get();
-		
-		for ($i=0; $i < sizeof($calonPDs); $i++) { 
-			$calonPDs[$i]->sekolah_asal = DB::connection('sqlsrv_2')->table('ppdb.sekolah')->where('sekolah_id','=',$calonPDs[$i]->asal_sekolah_id)->first();
+
+		$i = 0;
+		foreach ($calonPDs as $key) {
+			$sekolah = PilihanSekolah::where('pilihan_sekolah.calon_peserta_didik_id', $key->calon_peserta_didik_id)
+			->leftJoin('ppdb.sekolah AS sekolah', 'ppdb.pilihan_sekolah.sekolah_id', '=', 'sekolah.sekolah_id')
+			->leftJoin('ref.jalur AS jalur', 'ppdb.pilihan_sekolah.jalur_id', '=', 'jalur.jalur_id')
+			->select(
+				'pilihan_sekolah.*',
+				'sekolah.npsn AS npsn',
+				'sekolah.nama AS nama_sekolah',
+				'jalur.nama AS jalur'
+			)
+			->where('ppdb.pilihan_sekolah.soft_delete', 0)
+			->get();
+
+			$calonPDs[$i]->pilihan_sekolah = $sekolah;
+
+			$i++;
 		}
 
 	    return response(
