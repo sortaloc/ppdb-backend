@@ -178,6 +178,8 @@ return [
         Tymon\JWTAuth\Providers\LaravelServiceProvider::class,
         // Intervention\Image\ImageServiceProvider::class,
         Maatwebsite\Excel\ExcelServiceProvider::class,
+
+        Novay\WordTemplate\WordTemplateServiceProvider::class,
     ],
 
     /*
@@ -232,6 +234,7 @@ return [
         'JWTFactory' => Tymon\JWTAuth\Facades\JWTFactory::class,
         // 'Image' => Intervention\Image\Facades\Image::class,
         'Excel' => Maatwebsite\Excel\Facades\Excel::class,
+        'WordTemplate' => Novay\WordTemplate\Facade::class, 
     ],
 
 ];

@@ -94,7 +94,8 @@ Route::prefix('CalonPesertaDidik')->group(function(){
 	Route::get('get', 'CalonPesertaDidikController@index'); // params: { limit,offset, calon_peserta_didik_id }
 	Route::post('save', 'CalonPesertaDidikController@store'); // params: { 'kolom2_calon_pd' }
 	Route::get('delete/{id}', 'CalonPesertaDidikController@destroy'); // .../delete/a7109cd3-8307-4647-9608-2b665df3ba9f
-	Route::get('print/{id}', 'CalonPesertaDidikController@print'); // .../print/a7109cd3-8307-4647-9608-2b665df3ba9f
+	Route::get('print/formulir/{id}', 'CalonPesertaDidikController@print_formulir'); // .../print/a7109cd3-8307-4647-9608-2b665df3ba9f
+	Route::get('print/bukti/{id}', 'CalonPesertaDidikController@print_bukti'); // .../print/a7109cd3-8307-4647-9608-2b665df3ba9f
 	Route::post('importDariPesertaDidikDapodik', 'CalonPesertaDidikController@importDariPesertaDidikDapodik'); // params: { 'kolom2_calon_pd' }
 });
 

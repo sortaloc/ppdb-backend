@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\CalonPesertaDidik AS CalonPD;
+use Novay\WordTemplate\Facade AS WordTemplate;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use App\PilihanSekolah;
@@ -77,7 +78,7 @@ class CalonPesertaDidikController extends Controller
 					'kode_pos' => null,
 					'lintang' => $fetch_data[0]->lintang,
 					'bujur' => $fetch_data[0]->bujur,
-					'nama_ayah' => $fetch_data[0]->nama_ayah,
+					'tempat_lahir_ayah' => $fetch_data[0]->nama_ayah,
 					'nama_ibu' => $fetch_data[0]->nama_ibu_kandung,
 					'nama_wali' => $fetch_data[0]->nama_wali,
 					'orang_tua_utama' => 'ayah'
@@ -337,24 +338,118 @@ class CalonPesertaDidikController extends Controller
         return response([ 'rows' => $calon_pd ], 201);
     }
 
-    public function print($id)
+    public function print_formulir($id)
     {
-    	$calon_pd = CalonPD::where('calon_peserta_didik_id', $id)->first();
+    	$calon_pd = CalonPD::where('calon_peserta_didik_id', $id)
+    		->select(
+    			'ppdb.calon_peserta_didik.*',
+    			'sekolah.nama AS asal_sekolah',
+    			'kec.nama AS kecamatan',
+    			'kab.nama AS kabupaten',
+    			'prop.nama AS provinsi'
+    		)
+    		->leftJoin('ppdb.sekolah AS sekolah', 'ppdb.calon_peserta_didik.asal_sekolah_id', '=', 'sekolah.sekolah_id')
+    		->join('ref.mst_wilayah AS  kec', 'ppdb.calon_peserta_didik.kode_wilayah_kecamatan', '=', 'kec.kode_wilayah')
+    		->join('ref.mst_wilayah AS  kab', 'ppdb.calon_peserta_didik.kode_wilayah_kabupaten', '=', 'kab.kode_wilayah')
+    		->join('ref.mst_wilayah AS  prop', 'ppdb.calon_peserta_didik.kode_wilayah_provinsi', '=', 'prop.kode_wilayah')
+    		->first();
 
     	$pilihan_sekolah = PilihanSekolah::where('calon_peserta_didik_id', $id)
     		->select(
     			'ppdb.pilihan_sekolah.*',
     			'sekolah.nama AS nama_sekolah',
+    			'sekolah.npsn AS npsn',
     			'jalur.nama AS nama_jalur'
     		)
     		->leftJoin('ppdb.sekolah AS sekolah', 'ppdb.pilihan_sekolah.sekolah_id', '=', 'sekolah.sekolah_id')
     		->leftJoin('ref.jalur AS jalur', 'ppdb.pilihan_sekolah.jalur_id', '=', 'jalur.jalur_id')
     		->orderBy('urut_pilihan', 'ASC')
+    		->where('ppdb.pilihan_sekolah.soft_delete', 0)
     		->get();
 
-    	$rows['calon_pd'] = $calon_pd;
-    	$rows['pilihan_sekolah'] = $pilihan_sekolah;
+    	$file = public_path('template_formulir_pendaftaran.rtf');
+		
+		$array = array(
+			'#nama' 		=> $calon_pd->nama,
+			'#nik' 			=> $calon_pd->nik,
+			'#tempat_lahir' => $calon_pd->tempat_lahir,
+			'#tgllhr_d' 	=> date("d", strtotime($calon_pd->tanggal_lahir)),
+			'#tgllhr_m' 	=> date("m", strtotime($calon_pd->tanggal_lahir)),
+			'#tgllhr_y' 	=> date("Y", strtotime($calon_pd->tanggal_lahir)),
+			'#asal_sekolah' => $calon_pd->asal_sekolah,
+			'#alamat_tempat_tinggal' => $calon_pd->alamat_tempat_tinggal,
+			'#rt' 			=> $calon_pd->rt,
+			'#rw' 			=> $calon_pd->rw,
+			'#dusun' 		=> $calon_pd->dusun,
+			'#kecamatan' 	=> $calon_pd->kecamatan,
+			'#kabupaten' 	=> $calon_pd->kabupaten,
+			'#provinsi'		=> $calon_pd->provinsi,
+			'#lintang' 		=> $calon_pd->lintang,
+			'#bujur' 		=> $calon_pd->bujur,
+			'#npsn1' 		=> @$pilihan_sekolah[0]->npsn,
+			'#sekolah1' 	=> @$pilihan_sekolah[0]->nama_sekolah,
+			'#npsn2' 		=> @$pilihan_sekolah[1]->npsn,
+			'#sekolah2' 	=> @$pilihan_sekolah[1]->nama_sekolah,
+			'#orang_tua_utama' 			=> $calon_pd->orang_tua_utama == 'ayah' ? $calon_pd->nama_ayah : $calon_pd->orang_tua_utama == 'ibu' ? $calon_pd->nama_ibu : $calon_pd->nama_wali,
+			'#orang_tua_tempat_lahir' 	=> $calon_pd->orang_tua_utama == 'ayah' ? $calon_pd->tempat_lahir_ayah : $calon_pd->orang_tua_utama == 'ibu' ? $calon_pd->tempat_lahir_ibu : $calon_pd->tempat_lahir_wali,
+			'#orang_tua_tanggal_lahir' 	=> $calon_pd->orang_tua_utama == 'ayah' ? $calon_pd->tanggal_lahir_ayah : $calon_pd->orang_tua_utama == 'ibu' ? $calon_pd->tanggal_lahir_ibu : $calon_pd->tanggal_lahir_wali,
+			'#orang_tua_pendidikan'	 	=> $calon_pd->orang_tua_utama == 'ayah' ? $calon_pd->pendidikan_terakhir_id_ayah : $calon_pd->orang_tua_utama == 'ibu' ? $calon_pd->pendidikan_terakhir_id_ibu : $calon_pd->pendidikan_terakhir_id_wali,
+			'#orang_tua_pekerjaan' 		=> $calon_pd->orang_tua_utama == 'ayah' ? $calon_pd->pekerjaan_id_ayah : $calon_pd->orang_tua_utama == 'ibu' ? $calon_pd->pekerjaan_id_ibu : $calon_pd->pekerjaan_id_wali,
+			'#orang_tua_alamat_tempat_tinggal' => $calon_pd->orang_tua_utama == 'ayah' ? $calon_pd->alamat_tempat_tinggal_ayah : $calon_pd->orang_tua_utama == 'ibu' ? $calon_pd->alamat_tempat_tinggal_ibu : $calon_pd->alamat_tempat_tinggal_wali,
+			'#orang_tua_no_telepon' 	=> $calon_pd->orang_tua_utama == 'ayah' ? $calon_pd->no_telepon_ayah : $calon_pd->orang_tua_utama == 'ibu' ? $calon_pd->no_telepon_ibu : $calon_pd->no_telepon_wali,
+		);
 
-    	return response([ 'rows' => $rows ], 201);
+		$nama_file = 'Formulir_PPDB_2019.doc';
+
+		return $array; die;
+		
+		return WordTemplate::export($file, $array, $nama_file);
+    }
+
+    public function print_bukti($id)
+    {
+    	$calon_pd = CalonPD::where('calon_peserta_didik_id', $id)
+    		->select(
+    			'calon_peserta_didik.*',
+    			'sekolah.nama AS asal_sekolah'
+    		)
+    		->leftJoin('ppdb.sekolah AS sekolah', 'ppdb.calon_peserta_didik.asal_sekolah_id', '=', 'sekolah.sekolah_id')
+    		->first();
+
+    	$pilihan_sekolah = PilihanSekolah::where('calon_peserta_didik_id', $id)
+    		->select(
+    			'ppdb.pilihan_sekolah.*',
+    			'sekolah.nama AS nama_sekolah',
+    			'sekolah.npsn AS npsn',
+    			'jalur.nama AS nama_jalur'
+    		)
+    		->leftJoin('ppdb.sekolah AS sekolah', 'ppdb.pilihan_sekolah.sekolah_id', '=', 'sekolah.sekolah_id')
+    		->leftJoin('ref.jalur AS jalur', 'ppdb.pilihan_sekolah.jalur_id', '=', 'jalur.jalur_id')
+    		->orderBy('urut_pilihan', 'ASC')
+    		->where('ppdb.pilihan_sekolah.soft_delete', 0)
+    		->get();
+
+    	$file = public_path('template_bukti_pendaftaran.rtf');
+		
+		$array = array(
+			'#nama' 		=> $calon_pd->nama,
+			'#tempat_lahir' => $calon_pd->tempat_lahir,
+			'#tgllhr_d' 	=> date("d", strtotime($calon_pd->tanggal_lahir)),
+			'#tgllhr_m' 	=> date("m", strtotime($calon_pd->tanggal_lahir)),
+			'#tgllhr_y' 	=> date("Y", strtotime($calon_pd->tanggal_lahir)),
+			'#lintang' 		=> $calon_pd->lintang,
+			'#bujur' 		=> $calon_pd->bujur,
+			'#asal_sekolah' => $calon_pd->asal_sekolah,
+			'#npsn1' 		=> @$pilihan_sekolah[0]->npsn,
+			'#sekolah1' 	=> @$pilihan_sekolah[0]->nama_sekolah,
+			'#npsn2' 		=> @$pilihan_sekolah[1]->npsn,
+			'#sekolah2' 	=> @$pilihan_sekolah[1]->nama_sekolah,
+		);
+
+		$nama_file = 'Bukti_PPDB_2019.doc';
+
+		// return $array; die;
+		
+		return WordTemplate::export($file, $array, $nama_file);
     }
 }
