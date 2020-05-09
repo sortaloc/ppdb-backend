@@ -17,15 +17,20 @@ class CalonPesertaDidikController extends Controller
 	    $offset = $request->page ? ($request->page * $limit) : 0;
 	    $calon_peserta_didik_id = $request->calon_peserta_didik_id ? $request->calon_peserta_didik_id : null;
 
-	    $count = CalonPD::where('soft_delete', 0);
-	    $calonPDs = CalonPD::where('soft_delete', 0)
+	    $count = CalonPD::where('ppdb.calon_peserta_didik.soft_delete', 0);
+		$calonPDs = CalonPD::where('ppdb.calon_peserta_didik.soft_delete', 0)
+			->join('pengguna','pengguna.pengguna_id','=','ppdb.calon_peserta_didik.pengguna_id')
 	    	->limit($limit)
-	    	->offset($offset)
-			->orderBy('create_date', 'DESC');
+			->offset($offset)
+			->select(
+				'ppdb.calon_peserta_didik.*',
+				'pengguna.nama as nama_pengguna'
+			)
+			->orderBy('ppdb.calon_peserta_didik.create_date', 'DESC');
 			
 		if($calon_peserta_didik_id){
-			$count->where('calon_peserta_didik_id','=',$calon_peserta_didik_id);
-			$calonPDs->where('calon_peserta_didik_id','=',$calon_peserta_didik_id);
+			$count->where('ppdb.calon_peserta_didik.calon_peserta_didik_id','=',$calon_peserta_didik_id);
+			$calonPDs->where('ppdb.calon_peserta_didik.calon_peserta_didik_id','=',$calon_peserta_didik_id);
 		}
 
 	    $count = $count->count();
@@ -45,9 +50,292 @@ class CalonPesertaDidikController extends Controller
 	    );
 	}
 
+	public function upload(Request $request)
+    {
+        $data = $request->all();
+        $file = $data['image'];
+        // $pengguna_id = $data['pengguna_id'];
+        $jenis = $data['jenis'];
+
+        if(($file == 'undefined') OR ($file == '')){
+            return response()->json(['msg' => 'tidak_ada_file']);
+        }
+
+        $ext = $file->getClientOriginalExtension();
+        $name = $file->getClientOriginalName();
+
+        $destinationPath = base_path('/public/assets/berkas');
+        $upload = $file->move($destinationPath, $name);
+
+        $msg = $upload ? 'sukses' : 'gagal';
+
+        if($upload){
+
+			switch ($jenis) {
+				case 'file_gambar_pas_foto':
+					$jenis_berkas_id = 8;
+					break;
+				case 'file_gambar_kk':
+					$jenis_berkas_id = 1;
+					break;
+				case 'file_gambar_kip':
+					$jenis_berkas_id = 7;
+					break;
+				case 'file_gambar_surat_tidak_mampu':
+					$jenis_berkas_id = 9;
+					break;
+				case 'file_gambar_surat_pindah':
+					$jenis_berkas_id = 10;
+					break;
+				case 'file_gambar_piagam':
+					$jenis_berkas_id = 5;
+					break;
+				default:
+					$jenis_berkas_id = 8;
+					break;
+			}
+
+			return response(['msg' => $msg, 'filename' => "/assets/berkas/".$name, 'jenis' => $jenis, 'jenis_berkas_id' => $jenis_berkas_id]);
+
+            // $execute = DB::connection('sqlsrv_2')->table('pengguna')->where('pengguna_id','=',$pengguna_id)->update([
+            //     $jenis => "/assets/berkas/".$name
+            // ]);
+
+            // if($execute){
+            //     return response(['msg' => $msg, 'filename' => "/assets/berkas/".$name, 'jenis' => $jenis]);
+            // }
+        }
+
+    }
+
+	public function hapusSekolahPilihan(Request $request){
+		$calon_pd = DB::connection('sqlsrv_2')
+		->table('ppdb.pilihan_sekolah')
+		->where('calon_peserta_didik_id', '=', $request->input('calon_peserta_didik_id'))
+		->where('sekolah_id', '=', $request->input('sekolah_id'))
+		->update(['soft_delete' => 1]);
+
+        return response([ 'rows' => $calon_pd ], 201);
+	}
+	
+	public function getBerkasCalon(Request $request){
+		$calon_peserta_didik_id = $request->input('calon_peserta_didik_id') ? $request->input('calon_peserta_didik_id') : null;
+	
+		$fetch_cek = DB::connection('sqlsrv_2')
+			->table('ppdb.berkas_calon')
+			->where('ppdb.berkas_calon.calon_peserta_didik_id','=', $calon_peserta_didik_id)
+			->where('ppdb.berkas_calon.soft_delete','=',0)
+			->select(
+				'ppdb.berkas_calon.*'
+			)
+			->get();
+		
+			return response([ 
+				'rows' => $fetch_cek,
+				'count' => sizeof($fetch_cek)
+			], 201);
+	}
+	
+	public function getKonfirmasiPendaftaran(Request $request){
+		$calon_peserta_didik_id = $request->input('calon_peserta_didik_id') ? $request->input('calon_peserta_didik_id') : null;
+	
+		$fetch_cek = DB::connection('sqlsrv_2')
+			->table('ppdb.konfirmasi_pendaftaran')
+			->where('ppdb.konfirmasi_pendaftaran.calon_peserta_didik_id','=', $calon_peserta_didik_id)
+			->where('ppdb.konfirmasi_pendaftaran.soft_delete','=',0)
+			->select(
+				'ppdb.konfirmasi_pendaftaran.*'
+			)
+			->get();
+		
+			return response([ 
+				'rows' => $fetch_cek,
+				'count' => sizeof($fetch_cek)
+			], 201);
+	}
+
+	public function getSekolahPilihan(Request $request){
+		$calon_peserta_didik_id = $request->input('calon_peserta_didik_id') ? $request->input('calon_peserta_didik_id') : null;
+	
+		$fetch_cek = DB::connection('sqlsrv_2')
+			->table('ppdb.pilihan_sekolah')
+			->join('ppdb.sekolah as sekolah','sekolah.sekolah_id','=','ppdb.pilihan_sekolah.sekolah_id')
+			// ->where('sekolah_id','=', $sekolah_pilihan[$i])
+			->where('ppdb.pilihan_sekolah.calon_peserta_didik_id','=', $calon_peserta_didik_id)
+			->where('ppdb.pilihan_sekolah.soft_delete','=',0)
+			->select(
+				'ppdb.pilihan_sekolah.*',
+				'sekolah.nama',
+				'sekolah.npsn',
+				'sekolah.bentuk_pendidikan_id',
+				'sekolah.status_sekolah',
+				'sekolah.alamat_jalan as alamat'
+			)
+			->get();
+		
+			return response([ 
+				'rows' => $fetch_cek,
+				'count' => sizeof($fetch_cek)
+			], 201);
+	}
+
+	public function simpanKonfirmasiPendaftaran(Request $request){
+		$pengguna_id = $request->input('pengguna_id') ? $request->input('pengguna_id') : null;
+		$calon_peserta_didik_id = $request->input('calon_peserta_didik_id') ? $request->input('calon_peserta_didik_id') : null;
+		$status = $request->input('status') ? json_decode($request->input('status')) : "0";
+
+		$fetch_cek = DB::connection('sqlsrv_2')
+			->table('ppdb.konfirmasi_pendaftaran')
+			->where('calon_peserta_didik_id','=', $calon_peserta_didik_id)
+			// ->where('calon_peserta_didik_id','=', $berkas_calon[$i]->calon_peserta_didik_id)
+			->where('soft_delete','=',0)
+			->get();
+
+		if(sizeof($fetch_cek) > 0){
+			//update
+			
+			$exe = DB::connection('sqlsrv_2')->table('ppdb.konfirmasi_pendaftaran')
+			->where('calon_peserta_didik_id','=', $calon_peserta_didik_id)
+			->where('soft_delete','=',0)
+			->update([
+				'status' => $status
+			]);
+
+		}else{
+			//insert
+			$arrValue = [
+				'konfirmasi_pendaftaran_id' => Str::uuid(),
+				'calon_peserta_didik_id' => $calon_peserta_didik_id,
+				'pengguna_id' => $pengguna_id,
+				'status' => $status,
+				'periode_kegiatan_id' => '2020',
+				'create_date' => date('Y-m-d H:i:s'),
+				'last_update' => date('Y-m-d H:i:s'),
+				'soft_delete' => 0,
+			];
+
+			$exe = DB::connection('sqlsrv_2')->table('ppdb.konfirmasi_pendaftaran')->insert($arrValue);
+
+			if($exe){
+				return response([ 'success' => true ], 201);
+			}else{
+				return response([ 'success' => false ], 201);
+			}
+		}
+		
+		
+	}
+
+	public function simpanSekolahPilihan(Request $request){
+		$jalur_id = $request->input('jalur_id') ? $request->input('jalur_id') : null;
+		$sekolah_pilihan = $request->input('sekolah_pilihan') ? $request->input('sekolah_pilihan') : null;
+		$calon_peserta_didik_id = $request->input('calon_peserta_didik_id') ? $request->input('calon_peserta_didik_id') : null;
+
+		$berhasil = 0;
+		$gagal = 0;
+		$lewat = 0;
+
+		for ($i=0; $i < sizeof($sekolah_pilihan); $i++) { 
+
+			$fetch_cek = DB::connection('sqlsrv_2')
+			->table('ppdb.pilihan_sekolah')
+			->where('sekolah_id','=', $sekolah_pilihan[$i])
+			->where('calon_peserta_didik_id','=', $calon_peserta_didik_id)
+			->where('soft_delete','=',0)
+			->get();
+
+			if(sizeof($fetch_cek) > 0){
+				//update
+				//sementara ini do nothing
+				$lewat++;
+			}else{
+				//insert
+				$arrValue = [
+					'pilihan_sekolah_id' => Str::uuid(),
+					'sekolah_id' => $sekolah_pilihan[$i],
+					'calon_peserta_didik_id' => $calon_peserta_didik_id,
+					'jalur_id' => $jalur_id,
+					'urut_pilihan' => $i,
+					'create_date' => date('Y-m-d H:i:s'),
+					'last_update' => date('Y-m-d H:i:s'),
+					'soft_delete' => 0,
+					'periode_kegiatan_id' => '2020'
+				];
+
+				$exe = DB::connection('sqlsrv_2')->table('ppdb.pilihan_sekolah')->insert($arrValue);
+
+				if($exe){
+					$berhasil++;
+				}else{
+					$gagal++;
+				}
+			}
+			
+		}
+
+		return response([ 'berhasil' => $berhasil, 'gagal' => $gagal, 'lewat' => $lewat ], 201);
+	}
+
+	public function simpanBerkasCalon(Request $request){
+		$berkas_calon = $request->input('berkas_calon') ? json_decode($request->input('berkas_calon')) : null;
+
+		$berhasil = 0;
+		$gagal = 0;
+		$lewat = 0;
+
+		for ($i=0; $i < sizeof($berkas_calon); $i++) { 
+
+			$fetch_cek = DB::connection('sqlsrv_2')
+			->table('ppdb.berkas_calon')
+			->where('jenis_berkas_id','=', $berkas_calon[$i]->jenis_berkas_id)
+			->where('calon_peserta_didik_id','=', $berkas_calon[$i]->calon_peserta_didik_id)
+			->where('soft_delete','=',0)
+			->get();
+
+			if(sizeof($fetch_cek) > 0){
+				//update
+				
+				$exe = DB::connection('sqlsrv_2')->table('ppdb.berkas_calon')
+				->where('jenis_berkas_id','=', $berkas_calon[$i]->jenis_berkas_id)
+				->where('calon_peserta_didik_id','=', $berkas_calon[$i]->calon_peserta_didik_id)
+				->where('soft_delete','=',0)
+				->update([
+					'nama_file' => $berkas_calon[$i]->nama_file
+				]);
+
+				$lewat++;
+			}else{
+				//insert
+				$arrValue = [
+					'berkas_calon_id' => Str::uuid(),
+					'calon_peserta_didik_id' => $berkas_calon[$i]->calon_peserta_didik_id,
+					'jenis_berkas_id' => $berkas_calon[$i]->jenis_berkas_id,
+					'nama_file' => $berkas_calon[$i]->nama_file,
+					'keterangan' => $berkas_calon[$i]->keterangan,
+					'create_date' => date('Y-m-d H:i:s'),
+					'last_update' => date('Y-m-d H:i:s'),
+					'soft_delete' => 0,
+					'periode_kegiatan_id' => '2020'
+				];
+
+				$exe = DB::connection('sqlsrv_2')->table('ppdb.berkas_calon')->insert($arrValue);
+
+				if($exe){
+					$berhasil++;
+				}else{
+					$gagal++;
+				}
+			}
+			
+		}
+
+		return response([ 'berhasil' => $berhasil, 'gagal' => $gagal, 'lewat' => $lewat ], 201);
+	}
+
 	public function importDariPesertaDidikDapodik(Request $request)
 	{
 		$peserta_didik_id = $request->input('peserta_didik_id');
+		$pengguna_id = $request->input('pengguna_id');
 
 		$fetch_data = DB::connection('sqlsrv_2')->table('ppdb.peserta_didik')
 		->where('peserta_didik_id','=',$peserta_didik_id)->get();
@@ -57,6 +345,7 @@ class CalonPesertaDidikController extends Controller
 			$fetch_cek = DB::connection('sqlsrv_2')
 			->table('ppdb.calon_peserta_didik')
 			->where('calon_peserta_didik_id','=', $fetch_data[0]->peserta_didik_id)
+			->where('soft_delete','=', 0)
 			->get();
 
 			if(sizeof($fetch_cek) > 0){
@@ -81,7 +370,8 @@ class CalonPesertaDidikController extends Controller
 					'tempat_lahir_ayah' => $fetch_data[0]->nama_ayah,
 					'nama_ibu' => $fetch_data[0]->nama_ibu_kandung,
 					'nama_wali' => $fetch_data[0]->nama_wali,
-					'orang_tua_utama' => 'ayah'
+					'orang_tua_utama' => 'ayah',
+					'pengguna_id' => $pengguna_id
 				];
 
 				$exe = DB::connection('sqlsrv_2')
@@ -96,6 +386,7 @@ class CalonPesertaDidikController extends Controller
 					'create_date' => date('Y-m-d H:i:s'),
 					'last_update' => date('Y-m-d H:i:s'),
 					'soft_delete' => 0,
+					'pengguna_id' => $pengguna_id,
 					'nama' => $fetch_data[0]->nama,
 					'nisn' => $fetch_data[0]->nisn,
 					'nik' => $fetch_data[0]->nik,
@@ -144,6 +435,7 @@ class CalonPesertaDidikController extends Controller
 
 			$arrValue = [
 				"last_update" => date('Y-m-d H:i:s'), 
+				"soft_delete" => 0, 
 				"nik" => $request->input('nik'), 
 				"jenis_kelamin" => $request->input('jenis_kelamin'), 
 				"tempat_lahir" => $request->input('tempat_lahir'), 
@@ -247,9 +539,9 @@ class CalonPesertaDidikController extends Controller
 		}
 
 		if($exe){
-			return response([ 'success' => true, 'rows' => DB::connection('sqlsrv_2')->table('ppdb.calon_peserta_didik')->where('calon_peserta_didik_id','=', ($calon_peserta_didik_id ? $calon_peserta_didik_id : $pd_id))->get() ], 201);
+			return response([ 'success' => true, 'peserta_didik_id' => ($calon_peserta_didik_id ? $calon_peserta_didik_id : $pd_id),'rows' => DB::connection('sqlsrv_2')->table('ppdb.calon_peserta_didik')->where('calon_peserta_didik_id','=', ($calon_peserta_didik_id ? $calon_peserta_didik_id : $pd_id))->get() ], 201);
 		}else{
-			return response([ 'success' => false ], 201);
+			return response([ 'success' => false, 'peserta_didik_id' => null ], 201);
 		}
 
 		// return $label;

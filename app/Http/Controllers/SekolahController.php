@@ -12,6 +12,7 @@ class SekolahController extends Controller
     	$limit = $request->limit ? $request->limit : 10;
         $offset = $request->page ? ($request->page * $limit) : 0;
         $searchText = $request->searchText ? $request->searchText : '';
+        $status_sekolah = $request->status_sekolah ? $request->status_sekolah : '';
 
         $count = DB::connection('sqlsrv_2')->table('ppdb.sekolah')->where('soft_delete', 0);
         $sekolahs = DB::connection('sqlsrv_2')
@@ -30,6 +31,11 @@ class SekolahController extends Controller
         if($searchText){
         	$count = $count->where('sekolah.npsn', 'ilike', '%'.$searchText.'%')->orWhere('sekolah.nama', 'ilike', '%'.$searchText.'%');
         	$sekolahs = $sekolahs->where('sekolah.npsn', 'ilike', '%'.$searchText.'%')->orWhere('sekolah.nama', 'ilike', '%'.$searchText.'%');
+        }
+        
+        if($status_sekolah){
+        	$count = $count->where('sekolah.status_sekolah', '=', $status_sekolah);
+        	$sekolahs = $sekolahs->where('sekolah.status_sekolah', '=', $status_sekolah);
         }
 
         $count = $count->count();

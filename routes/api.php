@@ -97,6 +97,14 @@ Route::prefix('CalonPesertaDidik')->group(function(){
 	Route::get('print/formulir/{id}', 'CalonPesertaDidikController@print_formulir'); // .../print/a7109cd3-8307-4647-9608-2b665df3ba9f
 	Route::get('print/bukti/{id}', 'CalonPesertaDidikController@print_bukti'); // .../print/a7109cd3-8307-4647-9608-2b665df3ba9f
 	Route::post('importDariPesertaDidikDapodik', 'CalonPesertaDidikController@importDariPesertaDidikDapodik'); // params: { 'kolom2_calon_pd' }
+	Route::post('simpanSekolahPilihan', 'CalonPesertaDidikController@simpanSekolahPilihan'); // params: { 'kolom2_calon_pd' }
+	Route::get('getSekolahPilihan', 'CalonPesertaDidikController@getSekolahPilihan'); // params: { 'kolom2_calon_pd' }
+	Route::get('hapusSekolahPilihan', 'CalonPesertaDidikController@hapusSekolahPilihan'); // params: { 'kolom2_calon_pd' }
+	Route::post('upload', 'CalonPesertaDidikController@upload');
+	Route::post('simpanBerkasCalon', 'CalonPesertaDidikController@simpanBerkasCalon'); // params: { 'kolom2_calon_pd' }
+	Route::get('getBerkasCalon', 'CalonPesertaDidikController@getBerkasCalon'); // params: { 'kolom2_calon_pd' }
+	Route::post('simpanKonfirmasiPendaftaran', 'CalonPesertaDidikController@simpanKonfirmasiPendaftaran'); // params: { 'kolom2_calon_pd' }
+	Route::get('getKonfirmasiPendaftaran', 'CalonPesertaDidikController@getKonfirmasiPendaftaran'); // params: { 'kolom2_calon_pd' }
 });
 
 Route::prefix('BerkasCalon')->group(function(){
