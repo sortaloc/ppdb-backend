@@ -16,15 +16,20 @@ class CalonPesertaDidikController extends Controller
 	    $offset = $request->page ? ($request->page * $limit) : 0;
 	    $calon_peserta_didik_id = $request->calon_peserta_didik_id ? $request->calon_peserta_didik_id : null;
 
-	    $count = CalonPD::where('soft_delete', 0);
-	    $calonPDs = CalonPD::where('soft_delete', 0)
+	    $count = CalonPD::where('ppdb.calon_peserta_didik.soft_delete', 0);
+		$calonPDs = CalonPD::where('ppdb.calon_peserta_didik.soft_delete', 0)
+			->join('pengguna','pengguna.pengguna_id','=','ppdb.calon_peserta_didik.pengguna_id')
 	    	->limit($limit)
-	    	->offset($offset)
-			->orderBy('create_date', 'DESC');
+			->offset($offset)
+			->select(
+				'ppdb.calon_peserta_didik.*',
+				'pengguna.nama as nama_pengguna'
+			)
+			->orderBy('ppdb.calon_peserta_didik.create_date', 'DESC');
 			
 		if($calon_peserta_didik_id){
-			$count->where('calon_peserta_didik_id','=',$calon_peserta_didik_id);
-			$calonPDs->where('calon_peserta_didik_id','=',$calon_peserta_didik_id);
+			$count->where('ppdb.calon_peserta_didik.calon_peserta_didik_id','=',$calon_peserta_didik_id);
+			$calonPDs->where('ppdb.calon_peserta_didik.calon_peserta_didik_id','=',$calon_peserta_didik_id);
 		}
 
 	    $count = $count->count();
@@ -129,6 +134,24 @@ class CalonPesertaDidikController extends Controller
 				'count' => sizeof($fetch_cek)
 			], 201);
 	}
+	
+	public function getKonfirmasiPendaftaran(Request $request){
+		$calon_peserta_didik_id = $request->input('calon_peserta_didik_id') ? $request->input('calon_peserta_didik_id') : null;
+	
+		$fetch_cek = DB::connection('sqlsrv_2')
+			->table('ppdb.konfirmasi_pendaftaran')
+			->where('ppdb.konfirmasi_pendaftaran.calon_peserta_didik_id','=', $calon_peserta_didik_id)
+			->where('ppdb.konfirmasi_pendaftaran.soft_delete','=',0)
+			->select(
+				'ppdb.konfirmasi_pendaftaran.*'
+			)
+			->get();
+		
+			return response([ 
+				'rows' => $fetch_cek,
+				'count' => sizeof($fetch_cek)
+			], 201);
+	}
 
 	public function getSekolahPilihan(Request $request){
 		$calon_peserta_didik_id = $request->input('calon_peserta_didik_id') ? $request->input('calon_peserta_didik_id') : null;
@@ -153,6 +176,53 @@ class CalonPesertaDidikController extends Controller
 				'rows' => $fetch_cek,
 				'count' => sizeof($fetch_cek)
 			], 201);
+	}
+
+	public function simpanKonfirmasiPendaftaran(Request $request){
+		$pengguna_id = $request->input('pengguna_id') ? $request->input('pengguna_id') : null;
+		$calon_peserta_didik_id = $request->input('calon_peserta_didik_id') ? $request->input('calon_peserta_didik_id') : null;
+		$status = $request->input('status') ? json_decode($request->input('status')) : "0";
+
+		$fetch_cek = DB::connection('sqlsrv_2')
+			->table('ppdb.konfirmasi_pendaftaran')
+			->where('calon_peserta_didik_id','=', $calon_peserta_didik_id)
+			// ->where('calon_peserta_didik_id','=', $berkas_calon[$i]->calon_peserta_didik_id)
+			->where('soft_delete','=',0)
+			->get();
+
+		if(sizeof($fetch_cek) > 0){
+			//update
+			
+			$exe = DB::connection('sqlsrv_2')->table('ppdb.konfirmasi_pendaftaran')
+			->where('calon_peserta_didik_id','=', $calon_peserta_didik_id)
+			->where('soft_delete','=',0)
+			->update([
+				'status' => $status
+			]);
+
+		}else{
+			//insert
+			$arrValue = [
+				'konfirmasi_pendaftaran_id' => Str::uuid(),
+				'calon_peserta_didik_id' => $calon_peserta_didik_id,
+				'pengguna_id' => $pengguna_id,
+				'status' => $status,
+				'periode_kegiatan_id' => '2020',
+				'create_date' => date('Y-m-d H:i:s'),
+				'last_update' => date('Y-m-d H:i:s'),
+				'soft_delete' => 0,
+			];
+
+			$exe = DB::connection('sqlsrv_2')->table('ppdb.konfirmasi_pendaftaran')->insert($arrValue);
+
+			if($exe){
+				return response([ 'success' => true ], 201);
+			}else{
+				return response([ 'success' => false ], 201);
+			}
+		}
+		
+		
 	}
 
 	public function simpanSekolahPilihan(Request $request){
@@ -264,6 +334,7 @@ class CalonPesertaDidikController extends Controller
 	public function importDariPesertaDidikDapodik(Request $request)
 	{
 		$peserta_didik_id = $request->input('peserta_didik_id');
+		$pengguna_id = $request->input('pengguna_id');
 
 		$fetch_data = DB::connection('sqlsrv_2')->table('ppdb.peserta_didik')
 		->where('peserta_didik_id','=',$peserta_didik_id)->get();
@@ -273,6 +344,7 @@ class CalonPesertaDidikController extends Controller
 			$fetch_cek = DB::connection('sqlsrv_2')
 			->table('ppdb.calon_peserta_didik')
 			->where('calon_peserta_didik_id','=', $fetch_data[0]->peserta_didik_id)
+			->where('soft_delete','=', 0)
 			->get();
 
 			if(sizeof($fetch_cek) > 0){
@@ -297,7 +369,8 @@ class CalonPesertaDidikController extends Controller
 					'nama_ayah' => $fetch_data[0]->nama_ayah,
 					'nama_ibu' => $fetch_data[0]->nama_ibu_kandung,
 					'nama_wali' => $fetch_data[0]->nama_wali,
-					'orang_tua_utama' => 'ayah'
+					'orang_tua_utama' => 'ayah',
+					'pengguna_id' => $pengguna_id
 				];
 
 				$exe = DB::connection('sqlsrv_2')
@@ -312,6 +385,7 @@ class CalonPesertaDidikController extends Controller
 					'create_date' => date('Y-m-d H:i:s'),
 					'last_update' => date('Y-m-d H:i:s'),
 					'soft_delete' => 0,
+					'pengguna_id' => $pengguna_id,
 					'nama' => $fetch_data[0]->nama,
 					'nisn' => $fetch_data[0]->nisn,
 					'nik' => $fetch_data[0]->nik,
@@ -360,6 +434,7 @@ class CalonPesertaDidikController extends Controller
 
 			$arrValue = [
 				"last_update" => date('Y-m-d H:i:s'), 
+				"soft_delete" => 0, 
 				"nik" => $request->input('nik'), 
 				"jenis_kelamin" => $request->input('jenis_kelamin'), 
 				"tempat_lahir" => $request->input('tempat_lahir'), 
