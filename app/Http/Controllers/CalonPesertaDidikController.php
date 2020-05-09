@@ -660,10 +660,14 @@ class CalonPesertaDidikController extends Controller
     		->get();
 
     	$file = public_path('template_formulir_pendaftaran.rtf');
+
+    	// $orang_tua_tanggal_lahir = $calon_pd->orang_tua_utama == 'ayah' ? $calon_pd->tanggal_lahir_ayah : $calon_pd->orang_tua_utama == 'ibu' ? $calon_pd->tanggal_lahir_ibu : $calon_pd->tanggal_lahir_wali;
+    	$orangtua = $calon_pd->orang_tua_utama;
 		
 		$array = array(
 			'#nama' 		=> $calon_pd->nama,
 			'#nik' 			=> $calon_pd->nik,
+			'#jenis_kelamin' => $calon_pd->jenis_kelamin == 'L' ? 'Laki - laki' : $calon_pd->jenis_kelamin == 'P' ? 'Perempuan' : '',
 			'#tempat_lahir' => $calon_pd->tempat_lahir,
 			'#tgllhr_d' 	=> date("d", strtotime($calon_pd->tanggal_lahir)),
 			'#tgllhr_m' 	=> date("m", strtotime($calon_pd->tanggal_lahir)),
@@ -682,18 +686,22 @@ class CalonPesertaDidikController extends Controller
 			'#sekolah1' 	=> @$pilihan_sekolah[0]->nama_sekolah,
 			'#npsn2' 		=> @$pilihan_sekolah[1]->npsn,
 			'#sekolah2' 	=> @$pilihan_sekolah[1]->nama_sekolah,
-			'#orang_tua_utama' 			=> $calon_pd->orang_tua_utama == 'ayah' ? $calon_pd->nama_ayah : $calon_pd->orang_tua_utama == 'ibu' ? $calon_pd->nama_ibu : $calon_pd->nama_wali,
-			'#orang_tua_tempat_lahir' 	=> $calon_pd->orang_tua_utama == 'ayah' ? $calon_pd->tempat_lahir_ayah : $calon_pd->orang_tua_utama == 'ibu' ? $calon_pd->tempat_lahir_ibu : $calon_pd->tempat_lahir_wali,
-			'#orang_tua_tanggal_lahir' 	=> $calon_pd->orang_tua_utama == 'ayah' ? $calon_pd->tanggal_lahir_ayah : $calon_pd->orang_tua_utama == 'ibu' ? $calon_pd->tanggal_lahir_ibu : $calon_pd->tanggal_lahir_wali,
-			'#orang_tua_pendidikan'	 	=> $calon_pd->orang_tua_utama == 'ayah' ? $calon_pd->pendidikan_terakhir_id_ayah : $calon_pd->orang_tua_utama == 'ibu' ? $calon_pd->pendidikan_terakhir_id_ibu : $calon_pd->pendidikan_terakhir_id_wali,
-			'#orang_tua_pekerjaan' 		=> $calon_pd->orang_tua_utama == 'ayah' ? $calon_pd->pekerjaan_id_ayah : $calon_pd->orang_tua_utama == 'ibu' ? $calon_pd->pekerjaan_id_ibu : $calon_pd->pekerjaan_id_wali,
-			'#orang_tua_alamat_tempat_tinggal' => $calon_pd->orang_tua_utama == 'ayah' ? $calon_pd->alamat_tempat_tinggal_ayah : $calon_pd->orang_tua_utama == 'ibu' ? $calon_pd->alamat_tempat_tinggal_ibu : $calon_pd->alamat_tempat_tinggal_wali,
-			'#orang_tua_no_telepon' 	=> $calon_pd->orang_tua_utama == 'ayah' ? $calon_pd->no_telepon_ayah : $calon_pd->orang_tua_utama == 'ibu' ? $calon_pd->no_telepon_ibu : $calon_pd->no_telepon_wali,
+			'#npsn3' 		=> @$pilihan_sekolah[2]->npsn,
+			'#sekolah3' 	=> @$pilihan_sekolah[2]->nama_sekolah,
+			'#orang_tua_utama' 			=> $calon_pd['nama_'.$orangtua],
+			'#orang_tua_tempat_lahir' 	=> $calon_pd->tempat_lahir_ayah,
+			'#ort_t_d' 		=> date("d", strtotime( $calon_pd['tanggal_lahir_'.$orangtua] )),
+			'#ort_t_m' 		=> date("m", strtotime( $calon_pd['tanggal_lahir_'.$orangtua] )),
+			'#ort_t_y' 		=> date("Y", strtotime( $calon_pd['tanggal_lahir_'.$orangtua] )),
+			'#orang_tua_pendidikan'	 			=> $calon_pd['pendidikan_terakhir_id_'.$orangtua],
+			'#orang_tua_pekerjaan' 				=> $calon_pd['pekerjaan_id_'.$orangtua],
+			'#orang_tua_alamat_tempat_tinggal' 	=> $calon_pd['alamat_tempat_tinggal_'.$orangtua],
+			'#orang_tua_no_telepon' 			=> $calon_pd['no_telepon_'.$orangtua],
 		);
 
 		$nama_file = 'Formulir_PPDB_2019.doc';
 
-		return $array; die;
+		// return $array; die;
 		
 		return WordTemplate::export($file, $array, $nama_file);
     }
@@ -736,6 +744,8 @@ class CalonPesertaDidikController extends Controller
 			'#sekolah1' 	=> @$pilihan_sekolah[0]->nama_sekolah,
 			'#npsn2' 		=> @$pilihan_sekolah[1]->npsn,
 			'#sekolah2' 	=> @$pilihan_sekolah[1]->nama_sekolah,
+			'#npsn3' 		=> @$pilihan_sekolah[2]->npsn,
+			'#sekolah3' 	=> @$pilihan_sekolah[2]->nama_sekolah,
 		);
 
 		$nama_file = 'Bukti_PPDB_2019.doc';
