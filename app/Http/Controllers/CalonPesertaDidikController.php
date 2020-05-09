@@ -16,15 +16,16 @@ class CalonPesertaDidikController extends Controller
 		$limit = $request->limit ? $request->limit : 10;
 	    $offset = $request->page ? ($request->page * $limit) : 0;
 	    $calon_peserta_didik_id = $request->calon_peserta_didik_id ? $request->calon_peserta_didik_id : null;
+	    $searchText = $request->searchText ? $request->searchText : null;
 
 	    $count = CalonPD::where('ppdb.calon_peserta_didik.soft_delete', 0);
 		$calonPDs = CalonPD::where('ppdb.calon_peserta_didik.soft_delete', 0)
-			->join('pengguna','pengguna.pengguna_id','=','ppdb.calon_peserta_didik.pengguna_id')
+			->leftJoin('ppdb.sekolah AS sekolah', 'ppdb.calon_peserta_didik.asal_sekolah_id', '=', 'sekolah.sekolah_id')
 	    	->limit($limit)
 			->offset($offset)
 			->select(
 				'ppdb.calon_peserta_didik.*',
-				'pengguna.nama as nama_pengguna'
+				'sekolah.nama AS sekolah_asal'
 			)
 			->orderBy('ppdb.calon_peserta_didik.create_date', 'DESC');
 			
@@ -33,11 +34,31 @@ class CalonPesertaDidikController extends Controller
 			$calonPDs->where('ppdb.calon_peserta_didik.calon_peserta_didik_id','=',$calon_peserta_didik_id);
 		}
 
+		if($searchText != null){
+			$count->where('ppdb.calon_peserta_didik.nik', 'like', '%'.$searchText.'%');
+			$calonPDs->where('ppdb.calon_peserta_didik.nik', 'like', '%'.$searchText.'%');
+		}
+
 	    $count = $count->count();
 		$calonPDs = $calonPDs->get();
-		
-		for ($i=0; $i < sizeof($calonPDs); $i++) { 
-			$calonPDs[$i]->sekolah_asal = DB::connection('sqlsrv_2')->table('ppdb.sekolah')->where('sekolah_id','=',$calonPDs[$i]->asal_sekolah_id)->first();
+
+		$i = 0;
+		foreach ($calonPDs as $key) {
+			$sekolah = PilihanSekolah::where('pilihan_sekolah.calon_peserta_didik_id', $key->calon_peserta_didik_id)
+			->leftJoin('ppdb.sekolah AS sekolah', 'ppdb.pilihan_sekolah.sekolah_id', '=', 'sekolah.sekolah_id')
+			->leftJoin('ref.jalur AS jalur', 'ppdb.pilihan_sekolah.jalur_id', '=', 'jalur.jalur_id')
+			->select(
+				'pilihan_sekolah.*',
+				'sekolah.npsn AS npsn',
+				'sekolah.nama AS nama_sekolah',
+				'jalur.nama AS jalur'
+			)
+			->where('ppdb.pilihan_sekolah.soft_delete', 0)
+			->get();
+
+			$calonPDs[$i]->pilihan_sekolah = $sekolah;
+
+			$i++;
 		}
 
 	    return response(
@@ -681,10 +702,14 @@ class CalonPesertaDidikController extends Controller
     		->get();
 
     	$file = public_path('template_formulir_pendaftaran.rtf');
+
+    	// $orang_tua_tanggal_lahir = $calon_pd->orang_tua_utama == 'ayah' ? $calon_pd->tanggal_lahir_ayah : $calon_pd->orang_tua_utama == 'ibu' ? $calon_pd->tanggal_lahir_ibu : $calon_pd->tanggal_lahir_wali;
+    	$orangtua = $calon_pd->orang_tua_utama;
 		
 		$array = array(
 			'#nama' 		=> $calon_pd->nama,
 			'#nik' 			=> $calon_pd->nik,
+			'#jenis_kelamin' => $calon_pd->jenis_kelamin == 'L' ? 'Laki - laki' : $calon_pd->jenis_kelamin == 'P' ? 'Perempuan' : '',
 			'#tempat_lahir' => $calon_pd->tempat_lahir,
 			'#tgllhr_d' 	=> date("d", strtotime($calon_pd->tanggal_lahir)),
 			'#tgllhr_m' 	=> date("m", strtotime($calon_pd->tanggal_lahir)),
@@ -703,18 +728,22 @@ class CalonPesertaDidikController extends Controller
 			'#sekolah1' 	=> @$pilihan_sekolah[0]->nama_sekolah,
 			'#npsn2' 		=> @$pilihan_sekolah[1]->npsn,
 			'#sekolah2' 	=> @$pilihan_sekolah[1]->nama_sekolah,
-			'#orang_tua_utama' 			=> $calon_pd->orang_tua_utama == 'ayah' ? $calon_pd->nama_ayah : $calon_pd->orang_tua_utama == 'ibu' ? $calon_pd->nama_ibu : $calon_pd->nama_wali,
-			'#orang_tua_tempat_lahir' 	=> $calon_pd->orang_tua_utama == 'ayah' ? $calon_pd->tempat_lahir_ayah : $calon_pd->orang_tua_utama == 'ibu' ? $calon_pd->tempat_lahir_ibu : $calon_pd->tempat_lahir_wali,
-			'#orang_tua_tanggal_lahir' 	=> $calon_pd->orang_tua_utama == 'ayah' ? $calon_pd->tanggal_lahir_ayah : $calon_pd->orang_tua_utama == 'ibu' ? $calon_pd->tanggal_lahir_ibu : $calon_pd->tanggal_lahir_wali,
-			'#orang_tua_pendidikan'	 	=> $calon_pd->orang_tua_utama == 'ayah' ? $calon_pd->pendidikan_terakhir_id_ayah : $calon_pd->orang_tua_utama == 'ibu' ? $calon_pd->pendidikan_terakhir_id_ibu : $calon_pd->pendidikan_terakhir_id_wali,
-			'#orang_tua_pekerjaan' 		=> $calon_pd->orang_tua_utama == 'ayah' ? $calon_pd->pekerjaan_id_ayah : $calon_pd->orang_tua_utama == 'ibu' ? $calon_pd->pekerjaan_id_ibu : $calon_pd->pekerjaan_id_wali,
-			'#orang_tua_alamat_tempat_tinggal' => $calon_pd->orang_tua_utama == 'ayah' ? $calon_pd->alamat_tempat_tinggal_ayah : $calon_pd->orang_tua_utama == 'ibu' ? $calon_pd->alamat_tempat_tinggal_ibu : $calon_pd->alamat_tempat_tinggal_wali,
-			'#orang_tua_no_telepon' 	=> $calon_pd->orang_tua_utama == 'ayah' ? $calon_pd->no_telepon_ayah : $calon_pd->orang_tua_utama == 'ibu' ? $calon_pd->no_telepon_ibu : $calon_pd->no_telepon_wali,
+			'#npsn3' 		=> @$pilihan_sekolah[2]->npsn,
+			'#sekolah3' 	=> @$pilihan_sekolah[2]->nama_sekolah,
+			'#orang_tua_utama' 			=> $calon_pd['nama_'.$orangtua],
+			'#orang_tua_tempat_lahir' 	=> $calon_pd->tempat_lahir_ayah,
+			'#ort_t_d' 		=> date("d", strtotime( $calon_pd['tanggal_lahir_'.$orangtua] )),
+			'#ort_t_m' 		=> date("m", strtotime( $calon_pd['tanggal_lahir_'.$orangtua] )),
+			'#ort_t_y' 		=> date("Y", strtotime( $calon_pd['tanggal_lahir_'.$orangtua] )),
+			'#orang_tua_pendidikan'	 			=> $calon_pd['pendidikan_terakhir_id_'.$orangtua],
+			'#orang_tua_pekerjaan' 				=> $calon_pd['pekerjaan_id_'.$orangtua],
+			'#orang_tua_alamat_tempat_tinggal' 	=> $calon_pd['alamat_tempat_tinggal_'.$orangtua],
+			'#orang_tua_no_telepon' 			=> $calon_pd['no_telepon_'.$orangtua],
 		);
 
 		$nama_file = 'Formulir_PPDB_2019.doc';
 
-		return $array; die;
+		// return $array; die;
 		
 		return WordTemplate::export($file, $array, $nama_file);
     }
@@ -757,6 +786,8 @@ class CalonPesertaDidikController extends Controller
 			'#sekolah1' 	=> @$pilihan_sekolah[0]->nama_sekolah,
 			'#npsn2' 		=> @$pilihan_sekolah[1]->npsn,
 			'#sekolah2' 	=> @$pilihan_sekolah[1]->nama_sekolah,
+			'#npsn3' 		=> @$pilihan_sekolah[2]->npsn,
+			'#sekolah3' 	=> @$pilihan_sekolah[2]->nama_sekolah,
 		);
 
 		$nama_file = 'Bukti_PPDB_2019.doc';
