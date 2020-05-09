@@ -50,6 +50,27 @@ class CalonPesertaDidikController extends Controller
 	    );
 	}
 
+	public function cekNik(Request $request){
+		$nik = $request->input('nik') ? $request->input('nik') : null;
+
+		if($nik){
+			$fetch = DB::connection('sqlsrv_2')
+			->table('ppdb.calon_peserta_didik')
+			->where('nik','=',$nik)
+			->where('soft_delete','=',0)
+			->get();
+
+			// if(sizeof($fetch) > 0){
+				//ada
+			return response([ 'rows' => $fetch, 'count' => sizeof($fetch) ], 201);
+			// }else{
+			// 	//tidak ada
+			// }
+		}else{
+			return response([ 'rows' => [], 'count' => 1 ], 201);
+		}
+	}
+
 	public function upload(Request $request)
     {
         $data = $request->all();
@@ -345,7 +366,7 @@ class CalonPesertaDidikController extends Controller
 			$fetch_cek = DB::connection('sqlsrv_2')
 			->table('ppdb.calon_peserta_didik')
 			->where('calon_peserta_didik_id','=', $fetch_data[0]->peserta_didik_id)
-			->where('soft_delete','=', 0)
+			// ->where('soft_delete','=', 0)
 			->get();
 
 			if(sizeof($fetch_cek) > 0){

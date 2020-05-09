@@ -13,6 +13,7 @@ class PesertaDidikController extends Controller
     	$limit = $request->limit ? $request->limit : 10;
 	    $offset = $request->page ? ($request->page * $limit) : 0;
 	    $searchText = $request->searchText ? $request->searchText : '';
+	    $tingkat_akhir_saja = $request->tingkat_akhir_saja ? $request->tingkat_akhir_saja : 1;
 
 	    $count = new PD;
 		$pds = PD::limit($limit)
@@ -31,9 +32,27 @@ class PesertaDidikController extends Controller
 			);
 
 	    if($request->searchText){
-	    	$count = $count->where('peserta_didik.nisn', 'ilike', '%'.$searchText.'%')->orWhere('peserta_didik.nama', 'ilike', '%'.$searchText.'%')->orWhere('peserta_didik.nik', 'ilike', '%'.$searchText.'%');
-	    	$pds = $pds->where('peserta_didik.nisn', 'ilike', '%'.$searchText.'%')->orWhere('peserta_didik.nama', 'ilike', '%'.$searchText.'%')->orWhere('peserta_didik.nik', 'ilike', '%'.$searchText.'%');
-	    }
+	    	// $count = $count->where('peserta_didik.nisn', 'ilike', '%'.$searchText.'%')->orWhere('peserta_didik.nama', 'ilike', '%'.$searchText.'%')->orWhere('peserta_didik.nik', 'ilike', '%'.$searchText.'%');
+			// $pds = $pds->where('peserta_didik.nisn', 'ilike', '%'.$searchText.'%')->orWhere('peserta_didik.nama', 'ilike', '%'.$searchText.'%')->orWhere('peserta_didik.nik', 'ilike', '%'.$searchText.'%');
+			
+			$count = $count->where(function ($query) use ($searchText){
+                $query->where('peserta_didik.nama', 'ilike', '%'.$searchText.'%')
+					->orWhere('peserta_didik.nisn', 'ilike', '%'.$searchText.'%')
+					->orWhere('peserta_didik.nik', 'ilike', '%'.$searchText.'%');
+            });
+			$pds = $pds->where(function ($query) use ($searchText){
+                $query->where('peserta_didik.nama', 'ilike', '%'.$searchText.'%')
+					->orWhere('peserta_didik.nisn', 'ilike', '%'.$searchText.'%')
+					->orWhere('peserta_didik.nik', 'ilike', '%'.$searchText.'%');
+            });
+		}
+		
+		if($tingkat_akhir_saja == 1){
+			$count = $count->whereIn('peserta_didik.tingkat_pendidikan_id', array(6,9));
+	    	$pds = $pds->whereIn('peserta_didik.tingkat_pendidikan_id', array(6,9));
+		}
+
+		// return $pds->toSql();die;
 
 	    $count = $count->count();
 	    $pds = $pds->get();

@@ -28,6 +28,8 @@ class Cors
             'http://validasi.dikdasmen.kemdikbud.go.id',
             "http://192.168.0.104:3000",
             "http://test.one",
+            "http://sioman.nufaza.co.id:8090",
+            "*",
             null
         ];
         
