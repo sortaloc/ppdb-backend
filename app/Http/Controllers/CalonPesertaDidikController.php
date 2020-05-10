@@ -17,15 +17,24 @@ class CalonPesertaDidikController extends Controller
 	    $offset = $request->page ? ($request->page * $limit) : 0;
 	    $calon_peserta_didik_id = $request->calon_peserta_didik_id ? $request->calon_peserta_didik_id : null;
 	    $searchText = $request->searchText ? $request->searchText : null;
+	    $pengguna_id = $request->pengguna_id ? $request->pengguna_id : null;
 
 	    $count = CalonPD::where('ppdb.calon_peserta_didik.soft_delete', 0);
 		$calonPDs = CalonPD::where('ppdb.calon_peserta_didik.soft_delete', 0)
 			->leftJoin('ppdb.sekolah AS sekolah', 'ppdb.calon_peserta_didik.asal_sekolah_id', '=', 'sekolah.sekolah_id')
+			->leftJoin('ref.mst_wilayah AS kec', 'kec.kode_wilayah', '=', 'ppdb.calon_peserta_didik.kode_wilayah_kecamatan')
+			->leftJoin('ref.mst_wilayah AS kab', 'kab.kode_wilayah', '=', 'ppdb.calon_peserta_didik.kode_wilayah_kabupaten')
+			->leftJoin('ref.mst_wilayah AS prov', 'prov.kode_wilayah', '=', 'ppdb.calon_peserta_didik.kode_wilayah_provinsi')
+			->leftJoin('pengguna', 'pengguna.pengguna_id', '=', 'calon_peserta_didik.pengguna_id')
 	    	->limit($limit)
 			->offset($offset)
 			->select(
 				'ppdb.calon_peserta_didik.*',
-				'sekolah.nama AS sekolah_asal'
+				'sekolah.nama AS sekolah_asal',
+				'kec.nama as kecamatan',
+				'kab.nama as kabupaten',
+				'prov.nama as provinsi',
+				'pengguna.nama as nama_pengguna'
 			)
 			->orderBy('ppdb.calon_peserta_didik.create_date', 'DESC');
 			
@@ -34,13 +43,31 @@ class CalonPesertaDidikController extends Controller
 			$calonPDs->where('ppdb.calon_peserta_didik.calon_peserta_didik_id','=',$calon_peserta_didik_id);
 		}
 
-		if($searchText != null){
-			$count->where('ppdb.calon_peserta_didik.nik', 'like', '%'.$searchText.'%');
-			$calonPDs->where('ppdb.calon_peserta_didik.nik', 'like', '%'.$searchText.'%');
+		if($pengguna_id){
+			$count->where('ppdb.calon_peserta_didik.pengguna_id','=',$pengguna_id);
+			$calonPDs->where('ppdb.calon_peserta_didik.pengguna_id','=',$pengguna_id);
 		}
+
+		if($searchText != null){
+			// $count->where('ppdb.calon_peserta_didik.nik', 'ilike', '%'.$searchText.'%');
+			// $calonPDs->where('ppdb.calon_peserta_didik.nik', 'ilike', '%'.$searchText.'%');
+			$count = $count->where(function ($query) use ($searchText){
+                $query->where('ppdb.calon_peserta_didik.nama', 'ilike', '%'.$searchText.'%')
+					->orWhere('ppdb.calon_peserta_didik.nisn', 'ilike', '%'.$searchText.'%')
+					->orWhere('ppdb.calon_peserta_didik.nik', 'ilike', '%'.$searchText.'%');
+            });
+			$calonPDs = $calonPDs->where(function ($query) use ($searchText){
+                $query->where('ppdb.calon_peserta_didik.nama', 'ilike', '%'.$searchText.'%')
+					->orWhere('ppdb.calon_peserta_didik.nisn', 'ilike', '%'.$searchText.'%')
+					->orWhere('ppdb.calon_peserta_didik.nik', 'ilike', '%'.$searchText.'%');
+            });
+		}
+
+		// return $calonPDs->toSql();die;
 
 	    $count = $count->count();
 		$calonPDs = $calonPDs->get();
+
 
 		$i = 0;
 		foreach ($calonPDs as $key) {
@@ -58,6 +85,36 @@ class CalonPesertaDidikController extends Controller
 
 			$calonPDs[$i]->pilihan_sekolah = $sekolah;
 
+			//pas foto
+			$fetch_foto = DB::connection('sqlsrv_2')
+			->table('ppdb.berkas_calon')
+			->where('calon_peserta_didik_id','=',$key->calon_peserta_didik_id)
+			->where('soft_delete','=',0)
+			->where('jenis_berkas_id','=',8)
+			->get();
+
+			if(sizeof($fetch_foto) > 0){
+				$calonPDs[$i]->pas_foto = $fetch_foto[0]->nama_file;
+			}else{
+				$calonPDs[$i]->pas_foto = 'https://publicdomainvectors.org/photos/generic-avatar.png';
+			}
+
+			//konfirmasi
+			$fetch_foto = DB::connection('sqlsrv_2')
+			->table('ppdb.konfirmasi_pendaftaran')
+			->where('calon_peserta_didik_id','=',$key->calon_peserta_didik_id)
+			->where('soft_delete','=',0)
+			// ->where('jenis_berkas_id','=',8)
+			->get();
+
+			if(sizeof($fetch_foto) > 0){
+				$calonPDs[$i]->status_konfirmasi = $fetch_foto[0]->status;
+				$calonPDs[$i]->tanggal_konfirmasi = $fetch_foto[0]->last_update;
+			}else{
+				$calonPDs[$i]->status_konfirmasi = 0;
+				$calonPDs[$i]->tanggal_konfirmasi = '-';
+			}
+
 			$i++;
 		}
 
@@ -73,13 +130,21 @@ class CalonPesertaDidikController extends Controller
 
 	public function cekNik(Request $request){
 		$nik = $request->input('nik') ? $request->input('nik') : null;
+		$calon_peserta_didik_id = $request->input('calon_peserta_didik_id') ? $request->input('calon_peserta_didik_id') : null;
 
 		if($nik){
 			$fetch = DB::connection('sqlsrv_2')
 			->table('ppdb.calon_peserta_didik')
 			->where('nik','=',$nik)
-			->where('soft_delete','=',0)
-			->get();
+			->where('soft_delete','=',0);
+
+			if($calon_peserta_didik_id){
+				$fetch->whereNotIn('calon_peserta_didik_id',array($calon_peserta_didik_id));
+			}
+			
+			// return $fetch->toSql();die;
+
+			$fetch = $fetch->get();
 
 			// if(sizeof($fetch) > 0){
 				//ada
