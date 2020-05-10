@@ -15,7 +15,7 @@ class CalonPesertaDidikController extends Controller
 	{
 		$limit = $request->limit ? $request->limit : 10;
 	    $offset = $request->page ? ($request->page * $limit) : 0;
-	    $calon_peserta_didik_id = $request->calon_peserta_didik_id ? $request->calon_peserta_didik_id : null;
+	    $calon_peserta_didik_id = $request->calon_peserta_didik_id ? ($request->calon_peserta_didik_id != 'null' ? $request->calon_peserta_didik_id : null) : null;
 	    $searchText = $request->searchText ? $request->searchText : null;
 	    $pengguna_id = $request->pengguna_id ? $request->pengguna_id : null;
 
