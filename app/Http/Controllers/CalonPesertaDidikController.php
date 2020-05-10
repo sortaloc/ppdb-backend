@@ -115,6 +115,19 @@ class CalonPesertaDidikController extends Controller
 				$calonPDs[$i]->tanggal_konfirmasi = '-';
 			}
 
+			//sekolah_asal
+			$fetch_foto = DB::connection('sqlsrv_2')
+			->table('ppdb.sekolah')
+			->where('sekolah_id','=',$key->asal_sekolah_id)
+			->where('soft_delete','=',0)
+			->get();
+
+			if(sizeof($fetch_foto) > 0){
+				$calonPDs[$i]->sekolah_asal = $fetch_foto[0];
+			}else{
+				$calonPDs[$i]->sekolah_asal = [];
+			}
+
 			$i++;
 		}
 
