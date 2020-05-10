@@ -82,6 +82,7 @@ Route::prefix('PesertaDidik')->group(function(){
 
 Route::prefix('Sekolah')->group(function(){
 	Route::get('get', 'SekolahController@index'); // params: { limit,offset,searchText(nisn,nama) }
+	Route::post('getCalon', 'SekolahController@getCalonPDSekolah'); 
 });
 
 Route::prefix('Pilihsekolah')->group(function(){

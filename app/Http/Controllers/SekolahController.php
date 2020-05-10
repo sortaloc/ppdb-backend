@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use App\PilihanSekolah;
 use DB;
+use DateTime;
 
 class SekolahController extends Controller
 {
@@ -38,8 +40,26 @@ class SekolahController extends Controller
         	$sekolahs = $sekolahs->where('sekolah.status_sekolah', '=', $status_sekolah);
         }
 
+        if($request->sekolah_id){
+            $sekolahs->limit(1)->where('sekolah_id', $request->sekolah_id);
+        }
+
         $count = $count->count();
         $sekolahs = $sekolahs->get();
+
+        $i = 0;
+        foreach ($sekolahs as $key) {
+            $pendaftar = PilihanSekolah::where('sekolah_id', $key->sekolah_id)->where('soft_delete', 0)->count();
+            $kouta = 100;
+            $terima = 70;
+
+            $sekolahs[$i]->kouta = $kouta;
+            $sekolahs[$i]->pendaftar = $pendaftar;
+            $sekolahs[$i]->terima = $terima;
+            $sekolahs[$i]->sisa_kouta = ($kouta - $terima);
+
+            $i++;
+        }
 
         return response(
             [
@@ -49,5 +69,74 @@ class SekolahController extends Controller
             ],
             200
         );
+    }
+
+    public function getCalonPDSekolah(Request $request)
+    {
+        $limit = $request->limit ? $request->limit : 10;
+        $offset = $request->page ? ($request->page * $limit) : 0;
+        $searchText = $request->searchText ? $request->searchText : '';
+        $sekolah_id = $request->sekolah_id;
+
+        $calon_pd = DB::connection('sqlsrv_2')
+            ->table('ppdb.pilihan_sekolah AS pilihan_sekolah')
+            ->select(
+                'pilihan_sekolah.*',
+                'sekolah.npsn',
+                'sekolah.nama AS nama_sekolah',
+                'calon_pd.nik',
+                'calon_pd.nama AS nama_calon_pd',
+                'calon_pd.jenis_kelamin AS jenis_kelamin',
+                'calon_pd.tempat_lahir AS tempat_lahir',
+                'calon_pd.tanggal_lahir AS tanggal_lahir',
+                'calon_pd.asal_sekolah_id AS asal_sekolah_id',
+                'calon_pd.alamat_tempat_tinggal AS alamat_tempat_tinggal',
+                'sekolah_asal.npsn AS npsn_sekolah_asal',
+                'sekolah_asal.nama AS nama_sekolah_asal',
+                'jalur.nama AS nama_jalur'
+            )
+            ->leftJoin('ppdb.sekolah AS sekolah', 'pilihan_sekolah.sekolah_id', '=', 'sekolah.sekolah_id')
+            ->leftJoin('ppdb.calon_peserta_didik AS calon_pd', 'pilihan_sekolah.calon_peserta_didik_id', '=', 'calon_pd.calon_peserta_didik_id')
+            ->leftJoin('ref.jalur AS jalur', 'pilihan_sekolah.jalur_id', '=', 'jalur.jalur_id')
+            ->leftJoin('ppdb.sekolah AS sekolah_asal', 'calon_pd.asal_sekolah_id', '=', 'sekolah_asal.sekolah_id')
+            ->where('pilihan_sekolah.soft_delete', 0)
+            ->where('pilihan_sekolah.sekolah_id', $sekolah_id)
+            ->orderBy('pilihan_sekolah.create_date', 'ASC')
+            ->limit($limit)
+            ->offset($offset);
+
+        if($searchText){
+            $calon_pd = $calon_pd->where('calon_pd.nik', 'ilike', '%'.$searchText.'%')->orWhere('calon_pd.nama', 'ilike', '%'.$searchText.'%');
+        }
+
+        $calon_pd = $calon_pd->get();
+
+        $i = 0;
+        foreach ($calon_pd as $key) {
+            $calon_pd[$i]->umur = $this->hitung_umur($key->tanggal_lahir);
+
+            $i++;
+        }
+
+        return response(
+            [
+                'rows' => $calon_pd,
+                'count' => count($calon_pd),
+                'countAll' => count($calon_pd)
+            ],
+            200
+        );
+    }
+
+    public function hitung_umur($tanggal_lahir){
+        $birthDate = new DateTime($tanggal_lahir);
+        $today = new DateTime("today");
+        if ($birthDate > $today) { 
+            exit("0 tahun 0 bulan 0 hari");
+        }
+        $y = $today->diff($birthDate)->y;
+        $m = $today->diff($birthDate)->m;
+        $d = $today->diff($birthDate)->d;
+        return $y." tahun ".$m." bulan ".$d." hari";
     }
 }
