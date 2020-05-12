@@ -14,8 +14,13 @@ class PesertaDidikController extends Controller
 	    $offset = $request->page ? ($request->page * $limit) : 0;
 	    $searchText = $request->searchText ? $request->searchText : '';
 	    $tingkat_akhir_saja = $request->tingkat_akhir_saja ? $request->tingkat_akhir_saja : 1;
+	    $kode_wilayah = $request->kode_wilayah ? $request->kode_wilayah : null;
+	    $id_level_wilayah = $request->id_level_wilayah ? $request->id_level_wilayah : 0;
 
-	    $count = new PD;
+	    $count = PD::join('ref.mst_wilayah as kec','kec.kode_wilayah','=',DB::raw("LEFT(peserta_didik.kode_kec_pd,6)"))
+			->join('ref.mst_wilayah as kab','kec.mst_kode_wilayah','=','kab.kode_wilayah')
+			->join('ref.mst_wilayah as prop','kab.mst_kode_wilayah','=','prop.kode_wilayah')
+			->leftJoin('ppdb.calon_peserta_didik as calon_peserta_didik','calon_peserta_didik.calon_peserta_didik_id','=','peserta_didik.peserta_didik_id');
 		$pds = PD::limit($limit)
 			->join('ref.mst_wilayah as kec','kec.kode_wilayah','=',DB::raw("LEFT(peserta_didik.kode_kec_pd,6)"))
 			->join('ref.mst_wilayah as kab','kec.mst_kode_wilayah','=','kab.kode_wilayah')
@@ -50,6 +55,22 @@ class PesertaDidikController extends Controller
 		if($tingkat_akhir_saja == 1){
 			$count = $count->whereIn('peserta_didik.tingkat_pendidikan_id', array(6,9));
 	    	$pds = $pds->whereIn('peserta_didik.tingkat_pendidikan_id', array(6,9));
+		}
+
+		if($kode_wilayah){
+			switch ($id_level_wilayah) {
+				case 1:
+					$count = $count->where('prop.kode_wilayah', "=", $kode_wilayah);
+	    			$pds = $pds->where('prop.kode_wilayah', "=", $kode_wilayah);
+					break;
+				case 2:
+					$count = $count->where('kab.kode_wilayah', "=", $kode_wilayah);
+					$pds = $pds->where('kab.kode_wilayah', "=", $kode_wilayah);
+					break;
+				default:
+					# code...
+					break;
+			}
 		}
 
 		// return $pds->toSql();die;

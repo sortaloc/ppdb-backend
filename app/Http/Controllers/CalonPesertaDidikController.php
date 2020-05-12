@@ -66,7 +66,7 @@ class CalonPesertaDidikController extends Controller
 		// return $calonPDs->toSql();die;
 
 	    $count = $count->count();
-		$calonPDs = $calonPDs->get();
+		$calonPDs = $calonPDs->orderBy('create_date','DESC')->get();
 
 
 		$i = 0;
@@ -280,6 +280,9 @@ class CalonPesertaDidikController extends Controller
 		$fetch_cek = DB::connection('sqlsrv_2')
 			->table('ppdb.pilihan_sekolah')
 			->join('ppdb.sekolah as sekolah','sekolah.sekolah_id','=','ppdb.pilihan_sekolah.sekolah_id')
+			->leftJoin('ref.mst_wilayah AS kec', 'kec.kode_wilayah', '=', DB::raw("LEFT(sekolah.kode_wilayah,6)"))
+			->leftJoin('ref.mst_wilayah AS kab', 'kab.kode_wilayah', '=', 'kec.mst_kode_wilayah')
+			->leftJoin('ref.mst_wilayah AS prov', 'prov.kode_wilayah', '=', 'kab.mst_kode_wilayah')
 			// ->where('sekolah_id','=', $sekolah_pilihan[$i])
 			->where('ppdb.pilihan_sekolah.calon_peserta_didik_id','=', $calon_peserta_didik_id)
 			->where('ppdb.pilihan_sekolah.soft_delete','=',0)
@@ -289,7 +292,10 @@ class CalonPesertaDidikController extends Controller
 				'sekolah.npsn',
 				'sekolah.bentuk_pendidikan_id',
 				'sekolah.status_sekolah',
-				'sekolah.alamat_jalan as alamat'
+				'sekolah.alamat_jalan as alamat',
+				'kec.nama as kecamatan',
+				'kab.nama as kabupaten',
+				'prov.nama as provinsi'
 			)
 			->get();
 		

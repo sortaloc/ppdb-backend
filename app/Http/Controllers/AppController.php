@@ -212,4 +212,24 @@ class AppController extends Controller
 		
 	}
 
+	public function getWilayahKlien(Request $request){
+		$id_level_wilayah = $request->id_level_wilayah ? $request->id_level_wilayah : null;
+		$kode_wilayah = $request->kode_wilayah ? $request->kode_wilayah : null;
+
+		$fetch = DB::connection('sqlsrv_2')->table('ppdb.wilayah_klien')
+		->where('id_level_wilayah','=',$id_level_wilayah)
+		->where('soft_delete','=',0);
+
+		if($kode_wilayah){
+			$fetch->where('kode_wilayah','=',$kode_wilayah);
+		}
+		
+		$fetch = $fetch->get();
+
+		return response([ 
+			'rows' => $fetch,
+			'count' => sizeof($fetch)
+		], 200);
+	}
+
 }

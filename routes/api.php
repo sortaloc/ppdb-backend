@@ -119,6 +119,7 @@ Route::get('/clear-cache', function() {
 
 Route::prefix('app')->group(function () {
 	Route::post('getWilayah', 'AppController@getWilayah');
+	Route::post('getWilayahKlien', 'AppController@getWilayahKlien');
 	Route::post('getGeoJsonBasic', 'AppController@getGeoJsonBasic');
 });
 
