@@ -113,6 +113,12 @@ Route::prefix('BerkasCalon')->group(function(){
 	Route::get('get', 'BerkasCalonController@index'); // params: { limit,offset) }
 });
 
+Route::prefix('JadwalKegiatan')->group(function(){
+	Route::post('get', 'JadwalKegiatanController@index');
+	Route::post('save', 'JadwalKegiatanController@store');
+	Route::get('delete/{id}', 'JadwalKegiatanController@destroy');
+});
+
 Route::get('/clear-cache', function() {
     Artisan::call('cache:clear');
     return "Cache is cleared";
