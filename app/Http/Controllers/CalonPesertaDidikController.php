@@ -74,13 +74,52 @@ class CalonPesertaDidikController extends Controller
 			$sekolah = PilihanSekolah::where('pilihan_sekolah.calon_peserta_didik_id', $key->calon_peserta_didik_id)
 			->leftJoin('ppdb.sekolah AS sekolah', 'ppdb.pilihan_sekolah.sekolah_id', '=', 'sekolah.sekolah_id')
 			->leftJoin('ref.jalur AS jalur', 'ppdb.pilihan_sekolah.jalur_id', '=', 'jalur.jalur_id')
+			->leftJoin(
+				DB::raw('(
+					SELECT ROW_NUMBER
+					() OVER (
+						PARTITION BY pilihan_sekolah.jalur_id 
+					ORDER BY
+						pilihan_sekolah.urut_pilihan ASC,
+						COALESCE ( konf.status, 0 ) DESC,
+						konf.last_update ASC,	
+						pilihan_sekolah.create_date ASC
+					) AS urutan,
+					urut_pilihan,
+					COALESCE ( konf.status, 0 ) AS konfirmasi,
+					konf.last_update,
+					pilihan_sekolah.create_date,
+					pilihan_sekolah.jalur_id,
+					calon_peserta_didik.nama,
+					pilihan_sekolah.sekolah_id,
+					pilihan_sekolah.calon_peserta_didik_id
+				FROM
+					ppdb.pilihan_sekolah
+					LEFT JOIN ppdb.konfirmasi_pendaftaran konf ON konf.calon_peserta_didik_id = pilihan_sekolah.calon_peserta_didik_id
+					JOIN ppdb.calon_peserta_didik ON calon_peserta_didik.calon_peserta_didik_id = pilihan_sekolah.calon_peserta_didik_id 
+				WHERE
+					pilihan_sekolah.soft_delete = 0 
+					AND calon_peserta_didik.soft_delete = 0 
+				ORDER BY
+					pilihan_sekolah.urut_pilihan ASC,
+					COALESCE ( konf.status, 0 ) DESC,
+					konf.last_update ASC,
+					pilihan_sekolah.create_date ASC
+				) as urutan'), function ($join) {
+				$join->on('urutan.sekolah_id', '=', 'ppdb.pilihan_sekolah.sekolah_id');
+				$join->on('urutan.calon_peserta_didik_id','=','ppdb.pilihan_sekolah.calon_peserta_didik_id');
+			})
+			->leftJoin('ppdb.kuota_sekolah as kuota','kuota.sekolah_id','=','ppdb.pilihan_sekolah.sekolah_id')
 			->select(
 				'pilihan_sekolah.*',
 				'sekolah.npsn AS npsn',
 				'sekolah.nama AS nama_sekolah',
-				'jalur.nama AS jalur'
+				'jalur.nama AS jalur',
+				'urutan.urutan',
+				'kuota.kuota'
 			)
 			->where('ppdb.pilihan_sekolah.soft_delete', 0)
+			->orderBy('urut_pilihan','ASC')
 			->get();
 
 			$calonPDs[$i]->pilihan_sekolah = $sekolah;
@@ -96,7 +135,7 @@ class CalonPesertaDidikController extends Controller
 			if(sizeof($fetch_foto) > 0){
 				$calonPDs[$i]->pas_foto = $fetch_foto[0]->nama_file;
 			}else{
-				$calonPDs[$i]->pas_foto = 'https://publicdomainvectors.org/photos/generic-avatar.png';
+				$calonPDs[$i]->pas_foto = '/assets/img/generic-avatar.png';
 			}
 
 			//konfirmasi
@@ -327,6 +366,7 @@ class CalonPesertaDidikController extends Controller
 				'kab.nama as kabupaten',
 				'prov.nama as provinsi'
 			)
+			->orderBy('urut_pilihan','ASC')
 			->get();
 		
 			return response([ 
@@ -354,7 +394,8 @@ class CalonPesertaDidikController extends Controller
 			->where('calon_peserta_didik_id','=', $calon_peserta_didik_id)
 			->where('soft_delete','=',0)
 			->update([
-				'status' => $status
+				'status' => $status,
+				'last_update' => DB::raw('now()::timestamp(0)')
 			]);
 
 		}else{
@@ -365,8 +406,8 @@ class CalonPesertaDidikController extends Controller
 				'pengguna_id' => $pengguna_id,
 				'status' => $status,
 				'periode_kegiatan_id' => '2020',
-				'create_date' => date('Y-m-d H:i:s'),
-				'last_update' => date('Y-m-d H:i:s'),
+				'create_date' => DB::raw('now()::timestamp(0)'),
+				'last_update' => DB::raw('now()::timestamp(0)'),
 				'soft_delete' => 0,
 			];
 
@@ -385,17 +426,18 @@ class CalonPesertaDidikController extends Controller
 	public function simpanSekolahPilihan(Request $request){
 		$jalur_id = $request->input('jalur_id') ? $request->input('jalur_id') : null;
 		$sekolah_pilihan = $request->input('sekolah_pilihan') ? $request->input('sekolah_pilihan') : null;
+		$obj_sekolah_pilihan = $request->input('obj_sekolah_pilihan') ? $request->input('obj_sekolah_pilihan') : null;
 		$calon_peserta_didik_id = $request->input('calon_peserta_didik_id') ? $request->input('calon_peserta_didik_id') : null;
 
 		$berhasil = 0;
 		$gagal = 0;
 		$lewat = 0;
 
-		for ($i=0; $i < sizeof($sekolah_pilihan); $i++) { 
+		for ($i=0; $i < sizeof($obj_sekolah_pilihan); $i++) { 
 
 			$fetch_cek = DB::connection('sqlsrv_2')
 			->table('ppdb.pilihan_sekolah')
-			->where('sekolah_id','=', $sekolah_pilihan[$i])
+			->where('sekolah_id','=', $obj_sekolah_pilihan[$i]['sekolah_id'])
 			->where('calon_peserta_didik_id','=', $calon_peserta_didik_id)
 			->where('soft_delete','=',0)
 			->get();
@@ -405,14 +447,14 @@ class CalonPesertaDidikController extends Controller
 				//sementara ini do nothing
 				$arrValue = [
 					'jalur_id' => $jalur_id,
-					'urut_pilihan' => $i,
-					'last_update' => date('Y-m-d H:i:s'),
+					'urut_pilihan' => $obj_sekolah_pilihan[$i]['urut_pilihan'],
+					'last_update' => DB::raw('now()::timestamp(0)'),
 					'soft_delete' => 0
 				];
 
 				$exe = DB::connection('sqlsrv_2')
 				->table('ppdb.pilihan_sekolah')
-				->where('sekolah_id','=', $sekolah_pilihan[$i])
+				->where('sekolah_id','=', $obj_sekolah_pilihan[$i]['sekolah_id'])
 				->where('calon_peserta_didik_id','=', $calon_peserta_didik_id)
 				->update($arrValue);
 
@@ -421,12 +463,12 @@ class CalonPesertaDidikController extends Controller
 				//insert
 				$arrValue = [
 					'pilihan_sekolah_id' => Str::uuid(),
-					'sekolah_id' => $sekolah_pilihan[$i],
+					'sekolah_id' => $obj_sekolah_pilihan[$i]['sekolah_id'],
 					'calon_peserta_didik_id' => $calon_peserta_didik_id,
 					'jalur_id' => $jalur_id,
-					'urut_pilihan' => $i,
-					'create_date' => date('Y-m-d H:i:s'),
-					'last_update' => date('Y-m-d H:i:s'),
+					'urut_pilihan' => $obj_sekolah_pilihan[$i]['urut_pilihan'],
+					'create_date' => DB::raw('now()::timestamp(0)'),
+					'last_update' => DB::raw('now()::timestamp(0)'),
 					'soft_delete' => 0,
 					'periode_kegiatan_id' => '2020'
 				];
@@ -481,8 +523,8 @@ class CalonPesertaDidikController extends Controller
 					'jenis_berkas_id' => $berkas_calon[$i]->jenis_berkas_id,
 					'nama_file' => $berkas_calon[$i]->nama_file,
 					'keterangan' => $berkas_calon[$i]->keterangan,
-					'create_date' => date('Y-m-d H:i:s'),
-					'last_update' => date('Y-m-d H:i:s'),
+					'create_date' => DB::raw('now()::timestamp(0)'),
+					'last_update' => DB::raw('now()::timestamp(0)'),
 					'soft_delete' => 0,
 					'periode_kegiatan_id' => '2020'
 				];
@@ -520,7 +562,7 @@ class CalonPesertaDidikController extends Controller
 			if(sizeof($fetch_cek) > 0){
 				//update
 				$arrValue = [
-					'last_update' => date('Y-m-d H:i:s'),
+					'last_update' => DB::raw('now()::timestamp(0)'),
 					'soft_delete' => 0,
 					'nama' => $fetch_data[0]->nama,
 					'nisn' => $fetch_data[0]->nisn,
@@ -552,8 +594,8 @@ class CalonPesertaDidikController extends Controller
 				//insert
 				$arrValue = [
 					'calon_peserta_didik_id' => $fetch_data[0]->peserta_didik_id,
-					'create_date' => date('Y-m-d H:i:s'),
-					'last_update' => date('Y-m-d H:i:s'),
+					'create_date' => DB::raw('now()::timestamp(0)'),
+					'last_update' => DB::raw('now()::timestamp(0)'),
 					'soft_delete' => 0,
 					'pengguna_id' => $pengguna_id,
 					'nama' => $fetch_data[0]->nama,
@@ -593,6 +635,22 @@ class CalonPesertaDidikController extends Controller
 		}
 	}
 
+	public function simpanLintangBujur(Request $request){
+		$calon_peserta_didik_id = $request->input('calon_peserta_didik_id') ? $request->input('calon_peserta_didik_id') : null;
+		$lintang = $request->input('lintang') ? $request->input('lintang') : null;
+		$bujur = $request->input('bujur') ? $request->input('bujur') : null;
+
+		$exe = DB::connection('sqlsrv_2')->table('ppdb.calon_peserta_didik')
+			->where('calon_peserta_didik_id','=',$calon_peserta_didik_id)
+			->update([
+				'lintang' => $lintang,
+				'bujur' => $bujur,
+				'last_update' => DB::raw('now()::timestamp(0)')
+			]);
+		
+			return response([ 'success' => true, 'peserta_didik_id' => ($calon_peserta_didik_id),'rows' => DB::connection('sqlsrv_2')->table('ppdb.calon_peserta_didik')->where('calon_peserta_didik_id','=', ($calon_peserta_didik_id))->get() ], 201);
+	}
+
 	public function store(Request $request){
 
 		// return $request->input('')
@@ -605,7 +663,7 @@ class CalonPesertaDidikController extends Controller
 			$label = 'update';
 
 			$arrValue = [
-				"last_update" => date('Y-m-d H:i:s'), 
+				"last_update" => DB::raw('now()::timestamp(0)'), 
 				"soft_delete" => 0, 
 				"nik" => $request->input('nik'), 
 				"jenis_kelamin" => $request->input('jenis_kelamin'), 
@@ -660,8 +718,8 @@ class CalonPesertaDidikController extends Controller
 
 			$arrValue = [
 				"calon_peserta_didik_id" => $pd_id,
-				"create_date" => date('Y-m-d H:i:s'), 
-				"last_update" => date('Y-m-d H:i:s'), 
+				"create_date" => DB::raw('now()::timestamp(0)'), 
+				"last_update" => DB::raw('now()::timestamp(0)'), 
 				"soft_delete" => 0, 
 				"nik" => $request->input('nik'), 
 				"jenis_kelamin" => $request->input('jenis_kelamin'), 
@@ -728,8 +786,8 @@ class CalonPesertaDidikController extends Controller
 
 	// 	$arrValue = [
 	// 		"calon_peserta_didik_id" => $pd_id,
-	// 		"create_date" => date('Y-m-d H:i:s'), 
-	// 		"last_update" => date('Y-m-d H:i:s'), 
+	// 		"create_date" => DB::raw('now()::timestamp(0)'), 
+	// 		"last_update" => DB::raw('now()::timestamp(0)'), 
 	// 		"soft_delete" => 0, 
 	// 		"nik" => $data['nik'], 
 	// 		"jenis_kelamin" => $data['jenis_kelamin'], 

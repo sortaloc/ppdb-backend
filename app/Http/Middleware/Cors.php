@@ -29,6 +29,7 @@ class Cors
             "http://192.168.0.104:3000",
             "http://test.one",
             "http://sioman.nufaza.co.id:8090",
+            "http://portal-disdiklmj.web.id",
             "*",
             null
         ];

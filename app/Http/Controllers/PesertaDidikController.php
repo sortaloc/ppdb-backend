@@ -25,7 +25,12 @@ class PesertaDidikController extends Controller
 			->join('ref.mst_wilayah as kec','kec.kode_wilayah','=',DB::raw("LEFT(peserta_didik.kode_kec_pd,6)"))
 			->join('ref.mst_wilayah as kab','kec.mst_kode_wilayah','=','kab.kode_wilayah')
 			->join('ref.mst_wilayah as prop','kab.mst_kode_wilayah','=','prop.kode_wilayah')
-			->leftJoin('ppdb.calon_peserta_didik as calon_peserta_didik','calon_peserta_didik.nik','=','peserta_didik.nik')
+			// ->leftJoin('ppdb.calon_peserta_didik as calon_peserta_didik','calon_peserta_didik.nik','=','peserta_didik.nik')
+			->leftJoin('ppdb.calon_peserta_didik as calon_peserta_didik', function ($join) {
+				$join->on('calon_peserta_didik.nik', '=', 'peserta_didik.nik')
+				// ->on('calon_peserta_didik.nisn','=','peserta_didik.nisn')
+				->on('calon_peserta_didik.soft_delete','=',DB::raw('0'));
+			})
 			->skip($start)
 			->take($limit)
 			->orderBy('peserta_didik.nama', 'ASC')

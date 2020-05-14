@@ -94,6 +94,7 @@ Route::prefix('Pilihsekolah')->group(function(){
 Route::prefix('CalonPesertaDidik')->group(function(){
 	Route::get('get', 'CalonPesertaDidikController@index'); // params: { limit,offset, calon_peserta_didik_id, searchText:(nik) }
 	Route::post('save', 'CalonPesertaDidikController@store'); // params: { 'kolom2_calon_pd' }
+	Route::post('simpanLintangBujur', 'CalonPesertaDidikController@simpanLintangBujur'); // params: { 'kolom2_calon_pd' }
 	Route::get('delete/{id}', 'CalonPesertaDidikController@destroy'); // .../delete/a7109cd3-8307-4647-9608-2b665df3ba9f
 	Route::get('print/formulir/{id}', 'CalonPesertaDidikController@print_formulir'); // .../print/a7109cd3-8307-4647-9608-2b665df3ba9f
 	Route::get('print/bukti/{id}', 'CalonPesertaDidikController@print_bukti'); // .../print/a7109cd3-8307-4647-9608-2b665df3ba9f
@@ -116,7 +117,7 @@ Route::prefix('BerkasCalon')->group(function(){
 
 Route::prefix('JadwalKegiatan')->group(function(){
 	Route::post('get', 'JadwalKegiatanController@index');
-	Route::post('save', 'JadwalKegiatanController@store');
+	Route::post('simpanLintangBujur', 'JadwalKegiatanController@store');
 	Route::get('delete/{id}', 'JadwalKegiatanController@destroy');
 });
 
