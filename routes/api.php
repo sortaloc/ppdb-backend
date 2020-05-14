@@ -119,6 +119,7 @@ Route::prefix('JadwalKegiatan')->group(function(){
 	Route::post('get', 'JadwalKegiatanController@index');
 	Route::post('simpanLintangBujur', 'JadwalKegiatanController@store');
 	Route::get('delete/{id}', 'JadwalKegiatanController@destroy');
+	Route::get('beranda', 'JadwalKegiatanController@beranda');
 });
 
 Route::get('/clear-cache', function() {

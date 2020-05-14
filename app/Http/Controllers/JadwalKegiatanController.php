@@ -76,4 +76,19 @@ class JadwalKegiatanController extends Controller
     	$jadwal = Jadwal::where('jadwal_kegiatan_id', $id)->update(['soft_delete' => 1]);
     	return response([ 'rows' => $jadwal ], 201);
     }
+
+    public function beranda(Request $request)
+    {
+    	$jadwal = Jadwal::where('jadwal_kegiatan.soft_delete', 0)
+    		->orderBy('jadwal_kegiatan.tanggal_mulai', 'ASC')
+    		->get();
+
+    	return response(
+	        [
+	            'rows' => $jadwal,
+	            'count' => count($jadwal),
+	        ],
+	        200
+	    );
+    }
 }
