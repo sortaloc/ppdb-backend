@@ -947,24 +947,100 @@ class CalonPesertaDidikController extends Controller
     		->leftJoin('ppdb.sekolah AS sekolah', 'ppdb.calon_peserta_didik.asal_sekolah_id', '=', 'sekolah.sekolah_id')
     		->first();
 
-    	$pilihan_sekolah = PilihanSekolah::where('calon_peserta_didik_id', $id)
-    		->select(
-    			'ppdb.pilihan_sekolah.*',
-    			'sekolah.nama AS nama_sekolah',
-    			'sekolah.npsn AS npsn',
-    			'jalur.nama AS nama_jalur'
-    		)
-    		->leftJoin('ppdb.sekolah AS sekolah', 'ppdb.pilihan_sekolah.sekolah_id', '=', 'sekolah.sekolah_id')
-    		->leftJoin('ref.jalur AS jalur', 'ppdb.pilihan_sekolah.jalur_id', '=', 'jalur.jalur_id')
-    		->orderBy('urut_pilihan', 'ASC')
-    		->where('ppdb.pilihan_sekolah.soft_delete', 0)
-    		->get();
+    	// $pilihan_sekolah = PilihanSekolah::where('calon_peserta_didik_id', $id)
+    	// 	->select(
+    	// 		'ppdb.pilihan_sekolah.*',
+    	// 		'sekolah.nama AS nama_sekolah',
+    	// 		'sekolah.npsn AS npsn',
+    	// 		'jalur.nama AS nama_jalur'
+    	// 	)
+    	// 	->leftJoin('ppdb.sekolah AS sekolah', 'ppdb.pilihan_sekolah.sekolah_id', '=', 'sekolah.sekolah_id')
+    	// 	->leftJoin('ref.jalur AS jalur', 'ppdb.pilihan_sekolah.jalur_id', '=', 'jalur.jalur_id')
+    	// 	->orderBy('urut_pilihan', 'ASC')
+    	// 	->where('ppdb.pilihan_sekolah.soft_delete', 0)
+    	// 	->get();
+
+    	$pilihan_sekolah = PilihanSekolah::where('pilihan_sekolah.calon_peserta_didik_id', $id)
+			->leftJoin('ppdb.sekolah AS sekolah', 'ppdb.pilihan_sekolah.sekolah_id', '=', 'sekolah.sekolah_id')
+			->leftJoin('ref.jalur AS jalur', 'ppdb.pilihan_sekolah.jalur_id', '=', 'jalur.jalur_id')
+			->leftJoin(
+				DB::raw('(
+					SELECT ROW_NUMBER
+					() OVER (
+						PARTITION BY pilihan_sekolah.jalur_id 
+					ORDER BY
+						pilihan_sekolah.urut_pilihan ASC,
+						COALESCE ( konf.status, 0 ) DESC,
+						konf.last_update ASC,	
+						pilihan_sekolah.create_date ASC
+					) AS urutan,
+					urut_pilihan,
+					COALESCE ( konf.status, 0 ) AS konfirmasi,
+					konf.last_update,
+					pilihan_sekolah.create_date,
+					pilihan_sekolah.jalur_id,
+					calon_peserta_didik.nama,
+					pilihan_sekolah.sekolah_id,
+					pilihan_sekolah.calon_peserta_didik_id
+				FROM
+					ppdb.pilihan_sekolah
+					LEFT JOIN ppdb.konfirmasi_pendaftaran konf ON konf.calon_peserta_didik_id = pilihan_sekolah.calon_peserta_didik_id
+					JOIN ppdb.calon_peserta_didik ON calon_peserta_didik.calon_peserta_didik_id = pilihan_sekolah.calon_peserta_didik_id 
+				WHERE
+					pilihan_sekolah.soft_delete = 0 
+					AND calon_peserta_didik.soft_delete = 0 
+				ORDER BY
+					pilihan_sekolah.urut_pilihan ASC,
+					COALESCE ( konf.status, 0 ) DESC,
+					konf.last_update ASC,
+					pilihan_sekolah.create_date ASC
+				) as urutan'), function ($join) {
+				$join->on('urutan.sekolah_id', '=', 'ppdb.pilihan_sekolah.sekolah_id');
+				$join->on('urutan.calon_peserta_didik_id','=','ppdb.pilihan_sekolah.calon_peserta_didik_id');
+			})
+			->leftJoin('ppdb.kuota_sekolah as kuota','kuota.sekolah_id','=','ppdb.pilihan_sekolah.sekolah_id')
+			->select(
+				'pilihan_sekolah.*',
+				'sekolah.npsn AS npsn',
+				'sekolah.nama AS nama_sekolah',
+				'jalur.nama AS nama_jalur',
+				'urutan.urutan',
+				'kuota.kuota'
+			)
+			->where('ppdb.pilihan_sekolah.soft_delete', 0)
+			->orderBy('urut_pilihan','ASC')
+			->get();
+
+		if(count($pilihan_sekolah) >= 1){
+			$urutan = @$pilihan_sekolah[0]->urutan;
+
+			switch (strlen($urutan)) {
+				case 1: $nol = "000"; break;
+				case 2: $nol = "00"; break;
+				case 3: $nol = "0"; break;
+				case 4: $nol = ""; break;	
+				default:
+					$nol = "";
+					break;
+			}
+
+			$urutan = $nol.$urutan;
+		}else{
+			$urutan = "0000";
+		}
 
     	$file = public_path('template_bukti_pendaftaran.rtf');
+
+    	$nomor_urut = "0";
 		
 		$array = array(
+			'#no1'			=> substr($urutan, 0, 1),
+			'#no2'			=> substr($urutan, 1, 1),
+			'#no3'			=> substr($urutan, 2, 1),
+			'#no4'			=> substr($urutan, 3, 1),
 			'#nik' 			=> $calon_pd->nik,
 			'#nama' 		=> $calon_pd->nama,
+			'#nisn' 		=> $calon_pd->nisn,
 			'#tempat_lahir' => $calon_pd->tempat_lahir,
 			'#tgllhr_d' 	=> date("d", strtotime($calon_pd->tanggal_lahir)),
 			'#tgllhr_m' 	=> date("m", strtotime($calon_pd->tanggal_lahir)),
@@ -972,13 +1048,15 @@ class CalonPesertaDidikController extends Controller
 			'#lintang' 		=> $calon_pd->lintang,
 			'#bujur' 		=> $calon_pd->bujur,
 			'#asal_sekolah' => $calon_pd->asal_sekolah,
+			'#jalur' 		=> @$pilihan_sekolah[0]->nama_jalur,
 			'#npsn1' 		=> @$pilihan_sekolah[0]->npsn,
 			'#sekolah1' 	=> @$pilihan_sekolah[0]->nama_sekolah,
 			'#npsn2' 		=> @$pilihan_sekolah[1]->npsn,
 			'#sekolah2' 	=> @$pilihan_sekolah[1]->nama_sekolah,
 			'#npsn3' 		=> @$pilihan_sekolah[2]->npsn,
 			'#sekolah3' 	=> @$pilihan_sekolah[2]->nama_sekolah,
-			'#datenow' 		=> date("F Y")
+			'#datenow' 		=> date("F Y"),
+			'#codeQR' 		=> '' //array('path' => "https://api.qrserver.com/v1/create-qr-code/?size=60x60&data={$calon_pd->nik}", 'width' => '0.7in', 'height' => '0.7in'),
 		);
 
 		$nama_file = 'Bukti_PPDB_2019.doc';
