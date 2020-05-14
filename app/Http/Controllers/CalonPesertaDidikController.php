@@ -963,6 +963,7 @@ class CalonPesertaDidikController extends Controller
     	$file = public_path('template_bukti_pendaftaran.rtf');
 		
 		$array = array(
+			'#nik' 			=> $calon_pd->nik,
 			'#nama' 		=> $calon_pd->nama,
 			'#tempat_lahir' => $calon_pd->tempat_lahir,
 			'#tgllhr_d' 	=> date("d", strtotime($calon_pd->tanggal_lahir)),
@@ -977,6 +978,7 @@ class CalonPesertaDidikController extends Controller
 			'#sekolah2' 	=> @$pilihan_sekolah[1]->nama_sekolah,
 			'#npsn3' 		=> @$pilihan_sekolah[2]->npsn,
 			'#sekolah3' 	=> @$pilihan_sekolah[2]->nama_sekolah,
+			'#datenow' 		=> date("F Y")
 		);
 
 		$nama_file = 'Bukti_PPDB_2019.doc';

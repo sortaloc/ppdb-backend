@@ -19,10 +19,11 @@ class SekolahController extends Controller
         $id_level_wilayah = $request->id_level_wilayah ? $request->id_level_wilayah : 0;
         $bentuk_pendidikan_id = $request->bentuk_pendidikan_id ? $request->bentuk_pendidikan_id : null;
 
-        $count = DB::connection('sqlsrv_2')->table('ppdb.sekolah')->where('soft_delete', 0)
+        $count = DB::connection('sqlsrv_2')->table('ppdb.sekolah AS sekolah')->where('sekolah.soft_delete', 0)
             ->join('ref.bentuk_pendidikan as bp','bp.bentuk_pendidikan_id','=','sekolah.bentuk_pendidikan_id')
             ->join('ref.mst_wilayah as kec','kec.kode_wilayah','=',DB::raw("LEFT(sekolah.kode_wilayah,6)"))
 			->join('ref.mst_wilayah as kab','kec.mst_kode_wilayah','=','kab.kode_wilayah')
+            ->leftJoin('ppdb.kuota_sekolah AS kouta', 'kouta.sekolah_id', '=', 'sekolah.sekolah_id')
 			->join('ref.mst_wilayah as prop','kab.mst_kode_wilayah','=','prop.kode_wilayah');
         $sekolahs = DB::connection('sqlsrv_2')
             ->table('ppdb.sekolah as sekolah')
@@ -30,12 +31,14 @@ class SekolahController extends Controller
             ->join('ref.mst_wilayah as kec','kec.kode_wilayah','=',DB::raw("LEFT(sekolah.kode_wilayah,6)"))
 			->join('ref.mst_wilayah as kab','kec.mst_kode_wilayah','=','kab.kode_wilayah')
 			->join('ref.mst_wilayah as prop','kab.mst_kode_wilayah','=','prop.kode_wilayah')
+            ->leftJoin('ppdb.kuota_sekolah AS kouta', 'kouta.sekolah_id', '=', 'sekolah.sekolah_id')
         	->where('sekolah.soft_delete', 0)
         	->limit($limit)
             ->offset($offset)
             ->select(
                 'sekolah.*',
                 'bp.nama as bentuk',
+                'kouta.kuota AS kouta',
                 DB::raw("(case when sekolah.status_sekolah = 1 then 'Negeri' else 'Swasta' end) as status")
             )
         	->orderBy('sekolah.nama', 'ASC');
@@ -80,10 +83,10 @@ class SekolahController extends Controller
         $i = 0;
         foreach ($sekolahs as $key) {
             $pendaftar = PilihanSekolah::where('sekolah_id', $key->sekolah_id)->where('soft_delete', 0)->count();
-            $kouta = 100;
-            $terima = 70;
+            $kouta = $key->kouta;
+            $terima = 0;
 
-            $sekolahs[$i]->kouta = $kouta;
+            $sekolahs[$i]->kouta = $kouta == null ? 0 : $kouta;
             $sekolahs[$i]->pendaftar = $pendaftar;
             $sekolahs[$i]->terima = $terima;
             $sekolahs[$i]->sisa_kouta = ($kouta - $terima);
