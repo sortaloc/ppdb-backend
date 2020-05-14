@@ -232,4 +232,27 @@ class AppController extends Controller
 		], 200);
 	}
 
+	public function getBerkasJalur(Request $request){
+		$jalur_id = $request->jalur_id ? $request->jalur_id : null;
+
+		if($jalur_id){
+			$fetch = DB::connection('sqlsrv_2')
+			->table('ref.jalur_berkas')
+			->join('ref.jenis_berkas as jenis','jenis.jenis_berkas_id','=','ref.jalur_berkas.jenis_berkas_id')
+			->whereNull('ref.jalur_berkas.expired_date')
+			->where('jalur_id','=',$jalur_id)
+			->get();
+
+			return response([ 
+				'rows' => $fetch,
+				'count' => sizeof($fetch)
+			], 200);
+
+		}else{
+			return response([ 
+				'rows' => [],
+				'count' => 0
+			], 200);
+		}
+	}
 }

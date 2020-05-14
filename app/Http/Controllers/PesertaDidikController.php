@@ -10,8 +10,8 @@ class PesertaDidikController extends Controller
 {
     public function index(Request $request)
     {
-    	$limit = $request->limit ? $request->limit : 10;
-	    $offset = $request->page ? ($request->page * $limit) : 0;
+    	$limit = $request->limit ? $request->limit : 20;
+	    $start = $request->start ? $request->start : 0;
 	    $searchText = $request->searchText ? $request->searchText : '';
 	    $tingkat_akhir_saja = $request->tingkat_akhir_saja ? $request->tingkat_akhir_saja : 1;
 	    $kode_wilayah = $request->kode_wilayah ? $request->kode_wilayah : null;
@@ -25,8 +25,9 @@ class PesertaDidikController extends Controller
 			->join('ref.mst_wilayah as kec','kec.kode_wilayah','=',DB::raw("LEFT(peserta_didik.kode_kec_pd,6)"))
 			->join('ref.mst_wilayah as kab','kec.mst_kode_wilayah','=','kab.kode_wilayah')
 			->join('ref.mst_wilayah as prop','kab.mst_kode_wilayah','=','prop.kode_wilayah')
-			->leftJoin('ppdb.calon_peserta_didik as calon_peserta_didik','calon_peserta_didik.calon_peserta_didik_id','=','peserta_didik.peserta_didik_id')
-	    	->offset($offset)
+			->leftJoin('ppdb.calon_peserta_didik as calon_peserta_didik','calon_peserta_didik.nik','=','peserta_didik.nik')
+			->skip($start)
+			->take($limit)
 			->orderBy('peserta_didik.nama', 'ASC')
 			->select(
 				'peserta_didik.*',
@@ -53,8 +54,8 @@ class PesertaDidikController extends Controller
 		}
 		
 		if($tingkat_akhir_saja == 1){
-			$count = $count->whereIn('peserta_didik.tingkat_pendidikan_id', array(6,9));
-	    	$pds = $pds->whereIn('peserta_didik.tingkat_pendidikan_id', array(6,9));
+			$count = $count->whereIn('peserta_didik.tingkat_pendidikan_id', ((int)$id_level_wilayah == 2 ? array(71,72,73,6) : array(9)) );
+	    	$pds = $pds->whereIn('peserta_didik.tingkat_pendidikan_id', ((int)$id_level_wilayah == 2 ? array(71,72,73,6) : array(9))) ;
 		}
 
 		if($kode_wilayah){

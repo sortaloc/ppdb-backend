@@ -124,6 +124,7 @@ class CalonPesertaDidikController extends Controller
 
 			if(sizeof($fetch_foto) > 0){
 				$calonPDs[$i]->sekolah_asal = $fetch_foto[0];
+				// $calonPDs[$i]->tingkat_pendidikan_id = $fetch_foto[0];
 			}else{
 				$calonPDs[$i]->sekolah_asal = [];
 			}
@@ -149,6 +150,35 @@ class CalonPesertaDidikController extends Controller
 			$fetch = DB::connection('sqlsrv_2')
 			->table('ppdb.calon_peserta_didik')
 			->where('nik','=',$nik)
+			->where('soft_delete','=',0);
+
+			if($calon_peserta_didik_id){
+				$fetch->whereNotIn('calon_peserta_didik_id',array($calon_peserta_didik_id));
+			}
+			
+			// return $fetch->toSql();die;
+
+			$fetch = $fetch->get();
+
+			// if(sizeof($fetch) > 0){
+				//ada
+			return response([ 'rows' => $fetch, 'count' => sizeof($fetch) ], 201);
+			// }else{
+			// 	//tidak ada
+			// }
+		}else{
+			return response([ 'rows' => [], 'count' => 1 ], 201);
+		}
+	}
+
+	public function cekNISN(Request $request){
+		$nisn = $request->input('nisn') ? $request->input('nisn') : null;
+		$calon_peserta_didik_id = $request->input('calon_peserta_didik_id') ? $request->input('calon_peserta_didik_id') : null;
+
+		if($nisn){
+			$fetch = DB::connection('sqlsrv_2')
+			->table('ppdb.calon_peserta_didik')
+			->where('nisn','=',$nisn)
 			->where('soft_delete','=',0);
 
 			if($calon_peserta_didik_id){
@@ -373,6 +403,19 @@ class CalonPesertaDidikController extends Controller
 			if(sizeof($fetch_cek) > 0){
 				//update
 				//sementara ini do nothing
+				$arrValue = [
+					'jalur_id' => $jalur_id,
+					'urut_pilihan' => $i,
+					'last_update' => date('Y-m-d H:i:s'),
+					'soft_delete' => 0
+				];
+
+				$exe = DB::connection('sqlsrv_2')
+				->table('ppdb.pilihan_sekolah')
+				->where('sekolah_id','=', $sekolah_pilihan[$i])
+				->where('calon_peserta_didik_id','=', $calon_peserta_didik_id)
+				->update($arrValue);
+
 				$lewat++;
 			}else{
 				//insert
@@ -551,6 +594,8 @@ class CalonPesertaDidikController extends Controller
 	}
 
 	public function store(Request $request){
+
+		// return $request->input('')
 		$calon_peserta_didik_id = $request->input('calon_peserta_didik_id') ? $request->input('calon_peserta_didik_id') : null;
 
 		$fetch_cek = DB::connection('sqlsrv_2')->table('ppdb.calon_peserta_didik')->where('calon_peserta_didik_id','=',$calon_peserta_didik_id)->get();
@@ -600,6 +645,7 @@ class CalonPesertaDidikController extends Controller
 				"kode_wilayah_kabupaten" => $request->input('kode_wilayah_kabupaten'), 
 				"kode_wilayah_provinsi" => $request->input('kode_wilayah_provinsi'), 
 				"dusun" => $request->input('dusun'), 
+				"desa_kelurahan" => $request->input('desa_kelurahan'), 
 				"nama" => $request->input('nama'), 
 				"nisn" => $request->input('nisn'), 
 				"pendidikan_terakhir_id_wali" => $request->input('pendidikan_terakhir_id_wali')
@@ -655,6 +701,7 @@ class CalonPesertaDidikController extends Controller
 				"kode_wilayah_kabupaten" => $request->input('kode_wilayah_kabupaten'), 
 				"kode_wilayah_provinsi" => $request->input('kode_wilayah_provinsi'), 
 				"dusun" => $request->input('dusun'), 
+				"desa_kelurahan" => $request->input('desa_kelurahan'), 
 				"nama" => $request->input('nama'), 
 				"nisn" => $request->input('nisn'), 
 				"pendidikan_terakhir_id_wali" => $request->input('pendidikan_terakhir_id_wali')

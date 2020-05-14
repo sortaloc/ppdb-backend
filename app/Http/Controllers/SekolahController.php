@@ -17,6 +17,7 @@ class SekolahController extends Controller
         $status_sekolah = $request->status_sekolah ? $request->status_sekolah : '';
         $kode_wilayah = $request->kode_wilayah ? $request->kode_wilayah : null;
         $id_level_wilayah = $request->id_level_wilayah ? $request->id_level_wilayah : 0;
+        $bentuk_pendidikan_id = $request->bentuk_pendidikan_id ? $request->bentuk_pendidikan_id : null;
 
         $count = DB::connection('sqlsrv_2')->table('ppdb.sekolah')->where('soft_delete', 0)
             ->join('ref.bentuk_pendidikan as bp','bp.bentuk_pendidikan_id','=','sekolah.bentuk_pendidikan_id')
@@ -47,6 +48,11 @@ class SekolahController extends Controller
         if($status_sekolah){
         	$count = $count->where('sekolah.status_sekolah', '=', $status_sekolah);
         	$sekolahs = $sekolahs->where('sekolah.status_sekolah', '=', $status_sekolah);
+        }
+        
+        if($bentuk_pendidikan_id){
+        	$count = $count->where('sekolah.bentuk_pendidikan_id', '=', $bentuk_pendidikan_id);
+        	$sekolahs = $sekolahs->where('sekolah.bentuk_pendidikan_id', '=', $bentuk_pendidikan_id);
         }
 
         if($kode_wilayah){
