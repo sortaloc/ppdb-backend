@@ -778,82 +778,6 @@ class CalonPesertaDidikController extends Controller
 		// return $label;
 	}
 
-	// public function store(Request $request)
-	// {
-	// 	$uuid 	= Str::uuid();
-	// 	$pd_id 	= $request->calon_peserta_didik_id ? $request->calon_peserta_didik_id : $uuid;
-	// 	$data 	= $request->all();
-
-	// 	$arrValue = [
-	// 		"calon_peserta_didik_id" => $pd_id,
-	// 		"create_date" => DB::raw('now()::timestamp(0)'), 
-	// 		"last_update" => DB::raw('now()::timestamp(0)'), 
-	// 		"soft_delete" => 0, 
-	// 		"nik" => $data['nik'], 
-	// 		"jenis_kelamin" => $data['jenis_kelamin'], 
-	// 		"tempat_lahir" => $data['tempat_lahir'], 
-	// 		"tanggal_lahir" => $data['tanggal_lahir'], 
-	// 		"asal_sekolah_id" => $data['asal_sekolah_id'], 
-	// 		"alamat_tempat_tinggal" => $data['alamat_tempat_tinggal'], 
-	// 		"kode_wilayah_kecamatan" => $data['kode_wilayah_kecamatan'], 
-	// 		"kode_pos" => $data['kode_pos'], 
-	// 		"lintang" => $data['lintang'], 
-	// 		"bujur" => $data['bujur'], 
-	// 		"nama_ayah" => $data['nama_ayah'], 
-	// 		"tempat_lahir_ayah" => $data['tempat_lahir_ayah'], 
-	// 		"tanggal_lahir_ayah" => $data['tanggal_lahir_ayah'], 
-	// 		"pendidikan_terakhir_id_ayah" => $data['pendidikan_terakhir_id_ayah'], 
-	// 		"pekerjaan_id_ayah" => $data['pekerjaan_id_ayah'], 
-	// 		"alamat_tempat_tinggal_ayah" => $data['alamat_tempat_tinggal_ayah'], 
-	// 		"no_telepon_ayah" => $data['no_telepon_ayah'], 
-	// 		"nama_ibu" => $data['nama_ibu'], 
-	// 		"tempat_lahir_ibu" => $data['tempat_lahir_ibu'], 
-	// 		"pendidikan_terakhir_id_ibu" => $data['pendidikan_terakhir_id_ibu'], 
-	// 		"pekerjaan_id_ibu" => $data['pekerjaan_id_ibu'], 
-	// 		"alamat_tempat_tinggal_ibu" => $data['alamat_tempat_tinggal_ibu'], 
-	// 		"no_telepon_ibu" => $data['no_telepon_ibu'], 
-	// 		"nama_wali" => $data['nama_wali'], 
-	// 		"tempat_lahir_wali" => $data['tempat_lahir_wali'], 
-	// 		"tanggal_lahir_wali" => $data['tanggal_lahir_wali'], 
-	// 		"pekerjaan_id_wali" => $data['pekerjaan_id_wali'], 
-	// 		"tanggal_lahir_ibu" => $data['tanggal_lahir_ibu'], 
-	// 		"alamat_tempat_tinggal_wali" => $data['alamat_tempat_tinggal_wali'], 
-	// 		"no_telepon_wali" => $data['no_telepon_wali'], 
-	// 		"orang_tua_utama" => $data['orang_tua_utama'], 
-	// 		"rt" => $data['rt'], 
-	// 		"rw" => $data['rw'], 
-	// 		"pengguna_id" => $data['pengguna_id'], 
-	// 		"periode_kegiatan_id" => '2020', 
-	// 		"kode_wilayah_kabupaten" => $data['kode_wilayah_kabupaten'], 
-	// 		"kode_wilayah_provinsi" => $data['kode_wilayah_provinsi'], 
-	// 		"dusun" => $data['dusun'], 
-	// 		"nama" => $data['nama'], 
-	// 		"nisn" => $data['nisn'], 
-	// 		"pendidikan_terakhir_id_wali" => $data['pendidikan_terakhir_id_wali']
-	// 	];
-
-	// 	$data['soft_delete'] = 0;
-
-	// 	if($pd_id){
-	// 		$cek_pd = CalonPD::where('calon_peserta_didik_id', $pd_id)
-	// 			->where('soft_delete', 0)
-	// 			->count();
-	// 	}else{
-	// 		$cek_pd = 0;
-	// 	}
-
-	// 	if($cek_pd != 0){
-	// 		$calon_pd = CalonPD::where('calon_peserta_didik_id', $pd_id)
-	// 			->update($arrValue);
-	// 		$calon_pd = CalonPD::find($pd_id)->first();
-	// 	}else{
-	// 		$data['calon_peserta_didik_id'] = $pd_id ? $pd_id : $uuid;
-	// 		$calon_pd = CalonPD::create($arrValue);
-	// 	}
-
-	// 	return response([ 'rows' => $calon_pd ], 201);
-	// }
-
 	public function destroy($id)
     {
         $calon_pd = CalonPD::where('calon_peserta_didik_id', $id)->update(['soft_delete' => 1]);
@@ -869,33 +793,104 @@ class CalonPesertaDidikController extends Controller
     			'sekolah.nama AS asal_sekolah',
     			'kec.nama AS kecamatan',
     			'kab.nama AS kabupaten',
-    			'prop.nama AS provinsi'
+    			'prop.nama AS provinsi',
+    			'pddk_trkh_ayah.nama AS pendidikan_terakhir_ayah',
+    			'pddk_trkh_ayah.nama AS pendidikan_terakhir_ibu',
+    			'pddk_trkh_ayah.nama AS pendidikan_terakhir_wali',
+    			'work_ayah.nama AS pekerjaan_ayah',
+    			'work_ibu.nama AS pekerjaan_ibu',
+    			'work_wali.nama AS pekerjaan_wali'
     		)
     		->leftJoin('ppdb.sekolah AS sekolah', 'ppdb.calon_peserta_didik.asal_sekolah_id', '=', 'sekolah.sekolah_id')
     		->join('ref.mst_wilayah AS  kec', 'ppdb.calon_peserta_didik.kode_wilayah_kecamatan', '=', 'kec.kode_wilayah')
     		->join('ref.mst_wilayah AS  kab', 'ppdb.calon_peserta_didik.kode_wilayah_kabupaten', '=', 'kab.kode_wilayah')
     		->join('ref.mst_wilayah AS  prop', 'ppdb.calon_peserta_didik.kode_wilayah_provinsi', '=', 'prop.kode_wilayah')
+    		->leftJoin('ref.pendidikan_terakhir AS pddk_trkh_ayah', 'ppdb.calon_peserta_didik.pendidikan_terakhir_id_ayah', '=', 'pddk_trkh_ayah.pendidikan_terakhir_id')
+    		->leftJoin('ref.pendidikan_terakhir AS pddk_trkh_ibu', 'ppdb.calon_peserta_didik.pendidikan_terakhir_id_ibu', '=', 'pddk_trkh_ibu.pendidikan_terakhir_id')
+    		->leftJoin('ref.pendidikan_terakhir AS pddk_trkh_wali', 'ppdb.calon_peserta_didik.pendidikan_terakhir_id_wali', '=', 'pddk_trkh_wali.pendidikan_terakhir_id')
+    		->leftJoin('ref.pekerjaan AS work_ayah', 'ppdb.calon_peserta_didik.pekerjaan_id_ayah', '=', 'work_ayah.pekerjaan_id')
+    		->leftJoin('ref.pekerjaan AS work_ibu', 'ppdb.calon_peserta_didik.pekerjaan_id_ayah', '=', 'work_ibu.pekerjaan_id')
+    		->leftJoin('ref.pekerjaan AS work_wali', 'ppdb.calon_peserta_didik.pekerjaan_id_ayah', '=', 'work_wali.pekerjaan_id')
     		->first();
 
-    	$pilihan_sekolah = PilihanSekolah::where('calon_peserta_didik_id', $id)
-    		->select(
-    			'ppdb.pilihan_sekolah.*',
-    			'sekolah.nama AS nama_sekolah',
-    			'sekolah.npsn AS npsn',
-    			'jalur.nama AS nama_jalur'
-    		)
-    		->leftJoin('ppdb.sekolah AS sekolah', 'ppdb.pilihan_sekolah.sekolah_id', '=', 'sekolah.sekolah_id')
-    		->leftJoin('ref.jalur AS jalur', 'ppdb.pilihan_sekolah.jalur_id', '=', 'jalur.jalur_id')
-    		->orderBy('urut_pilihan', 'ASC')
-    		->where('ppdb.pilihan_sekolah.soft_delete', 0)
-    		->get();
+    	$pilihan_sekolah = PilihanSekolah::where('pilihan_sekolah.calon_peserta_didik_id', $id)
+			->leftJoin('ppdb.sekolah AS sekolah', 'ppdb.pilihan_sekolah.sekolah_id', '=', 'sekolah.sekolah_id')
+			->leftJoin('ref.jalur AS jalur', 'ppdb.pilihan_sekolah.jalur_id', '=', 'jalur.jalur_id')
+			->leftJoin(
+				DB::raw('(
+					SELECT ROW_NUMBER
+					() OVER (
+						PARTITION BY pilihan_sekolah.jalur_id 
+					ORDER BY
+						pilihan_sekolah.urut_pilihan ASC,
+						COALESCE ( konf.status, 0 ) DESC,
+						konf.last_update ASC,	
+						pilihan_sekolah.create_date ASC
+					) AS urutan,
+					urut_pilihan,
+					COALESCE ( konf.status, 0 ) AS konfirmasi,
+					konf.last_update,
+					pilihan_sekolah.create_date,
+					pilihan_sekolah.jalur_id,
+					calon_peserta_didik.nama,
+					pilihan_sekolah.sekolah_id,
+					pilihan_sekolah.calon_peserta_didik_id
+				FROM
+					ppdb.pilihan_sekolah
+					LEFT JOIN ppdb.konfirmasi_pendaftaran konf ON konf.calon_peserta_didik_id = pilihan_sekolah.calon_peserta_didik_id
+					JOIN ppdb.calon_peserta_didik ON calon_peserta_didik.calon_peserta_didik_id = pilihan_sekolah.calon_peserta_didik_id 
+				WHERE
+					pilihan_sekolah.soft_delete = 0 
+					AND calon_peserta_didik.soft_delete = 0 
+				ORDER BY
+					pilihan_sekolah.urut_pilihan ASC,
+					COALESCE ( konf.status, 0 ) DESC,
+					konf.last_update ASC,
+					pilihan_sekolah.create_date ASC
+				) as urutan'), function ($join) {
+				$join->on('urutan.sekolah_id', '=', 'ppdb.pilihan_sekolah.sekolah_id');
+				$join->on('urutan.calon_peserta_didik_id','=','ppdb.pilihan_sekolah.calon_peserta_didik_id');
+			})
+			->leftJoin('ppdb.kuota_sekolah as kuota','kuota.sekolah_id','=','ppdb.pilihan_sekolah.sekolah_id')
+			->select(
+				'pilihan_sekolah.*',
+				'sekolah.npsn AS npsn',
+				'sekolah.nama AS nama_sekolah',
+				'jalur.nama AS nama_jalur',
+				'urutan.urutan',
+				'kuota.kuota'
+			)
+			->where('ppdb.pilihan_sekolah.soft_delete', 0)
+			->orderBy('urut_pilihan','ASC')
+			->get();
+
+    	if(count($pilihan_sekolah) >= 1){
+			$urutan = @$pilihan_sekolah[0]->urutan;
+
+			switch (strlen($urutan)) {
+				case 1: $nol = "000"; break;
+				case 2: $nol = "00"; break;
+				case 3: $nol = "0"; break;
+				case 4: $nol = ""; break;	
+				default:
+					$nol = "";
+					break;
+			}
+
+			$urutan = $nol.$urutan;
+		}else{
+			$urutan = "0000";
+		}
 
     	$file = public_path('template_formulir_pendaftaran.rtf');
 
-    	// $orang_tua_tanggal_lahir = $calon_pd->orang_tua_utama == 'ayah' ? $calon_pd->tanggal_lahir_ayah : $calon_pd->orang_tua_utama == 'ibu' ? $calon_pd->tanggal_lahir_ibu : $calon_pd->tanggal_lahir_wali;
     	$orangtua = $calon_pd->orang_tua_utama;
 		
 		$array = array(
+			'#no1'			=> substr($urutan, 0, 1),
+			'#no2'			=> substr($urutan, 1, 1),
+			'#no3'			=> substr($urutan, 2, 1),
+			'#no4'			=> substr($urutan, 3, 1),
 			'#nama' 		=> $calon_pd->nama,
 			'#nik' 			=> $calon_pd->nik,
 			'#jenis_kelamin' => $calon_pd->jenis_kelamin == 'L' ? 'Laki - laki' : $calon_pd->jenis_kelamin == 'P' ? 'Perempuan' : '',
@@ -924,8 +919,8 @@ class CalonPesertaDidikController extends Controller
 			'#ort_t_d' 		=> date("d", strtotime( $calon_pd['tanggal_lahir_'.$orangtua] )),
 			'#ort_t_m' 		=> date("m", strtotime( $calon_pd['tanggal_lahir_'.$orangtua] )),
 			'#ort_t_y' 		=> date("Y", strtotime( $calon_pd['tanggal_lahir_'.$orangtua] )),
-			'#orang_tua_pendidikan'	 			=> $calon_pd['pendidikan_terakhir_id_'.$orangtua],
-			'#orang_tua_pekerjaan' 				=> $calon_pd['pekerjaan_id_'.$orangtua],
+			'#orang_tua_pendidikan'	 			=> $calon_pd['pendidikan_terakhir_'.$orangtua],
+			'#orang_tua_pekerjaan' 				=> $calon_pd['pekerjaan_'.$orangtua],
 			'#orang_tua_alamat_tempat_tinggal' 	=> $calon_pd['alamat_tempat_tinggal_'.$orangtua],
 			'#orang_tua_no_telepon' 			=> $calon_pd['no_telepon_'.$orangtua],
 		);
@@ -946,19 +941,6 @@ class CalonPesertaDidikController extends Controller
     		)
     		->leftJoin('ppdb.sekolah AS sekolah', 'ppdb.calon_peserta_didik.asal_sekolah_id', '=', 'sekolah.sekolah_id')
     		->first();
-
-    	// $pilihan_sekolah = PilihanSekolah::where('calon_peserta_didik_id', $id)
-    	// 	->select(
-    	// 		'ppdb.pilihan_sekolah.*',
-    	// 		'sekolah.nama AS nama_sekolah',
-    	// 		'sekolah.npsn AS npsn',
-    	// 		'jalur.nama AS nama_jalur'
-    	// 	)
-    	// 	->leftJoin('ppdb.sekolah AS sekolah', 'ppdb.pilihan_sekolah.sekolah_id', '=', 'sekolah.sekolah_id')
-    	// 	->leftJoin('ref.jalur AS jalur', 'ppdb.pilihan_sekolah.jalur_id', '=', 'jalur.jalur_id')
-    	// 	->orderBy('urut_pilihan', 'ASC')
-    	// 	->where('ppdb.pilihan_sekolah.soft_delete', 0)
-    	// 	->get();
 
     	$pilihan_sekolah = PilihanSekolah::where('pilihan_sekolah.calon_peserta_didik_id', $id)
 			->leftJoin('ppdb.sekolah AS sekolah', 'ppdb.pilihan_sekolah.sekolah_id', '=', 'sekolah.sekolah_id')
@@ -1030,8 +1012,6 @@ class CalonPesertaDidikController extends Controller
 		}
 
     	$file = public_path('template_bukti_pendaftaran.rtf');
-
-    	$nomor_urut = "0";
 		
 		$array = array(
 			'#no1'			=> substr($urutan, 0, 1),
