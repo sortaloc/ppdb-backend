@@ -107,6 +107,7 @@ Route::prefix('CalonPesertaDidik')->group(function(){
 	Route::post('simpanKonfirmasiPendaftaran', 'CalonPesertaDidikController@simpanKonfirmasiPendaftaran'); // params: { 'kolom2_calon_pd' }
 	Route::get('getKonfirmasiPendaftaran', 'CalonPesertaDidikController@getKonfirmasiPendaftaran'); // params: { 'kolom2_calon_pd' }
 	Route::get('cekNik', 'CalonPesertaDidikController@cekNik'); // params: { 'kolom2_calon_pd' }
+	Route::get('cekNISN', 'CalonPesertaDidikController@cekNISN'); // params: { 'kolom2_calon_pd' }
 });
 
 Route::prefix('BerkasCalon')->group(function(){
@@ -121,6 +122,7 @@ Route::get('/clear-cache', function() {
 Route::prefix('app')->group(function () {
 	Route::post('getWilayah', 'AppController@getWilayah');
 	Route::post('getWilayahKlien', 'AppController@getWilayahKlien');
+	Route::post('getBerkasJalur', 'AppController@getBerkasJalur');
 	Route::post('getGeoJsonBasic', 'AppController@getGeoJsonBasic');
 });
 
