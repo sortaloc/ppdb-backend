@@ -54,8 +54,11 @@ class SekolahController extends Controller
         }
         
         if($bentuk_pendidikan_id){
-        	$count = $count->where('sekolah.bentuk_pendidikan_id', '=', $bentuk_pendidikan_id);
-        	$sekolahs = $sekolahs->where('sekolah.bentuk_pendidikan_id', '=', $bentuk_pendidikan_id);
+
+            $arrBentukPendidikan = explode("-",$bentuk_pendidikan_id);
+
+        	$count = $count->whereIn('sekolah.bentuk_pendidikan_id', $arrBentukPendidikan);
+        	$sekolahs = $sekolahs->whereIn('sekolah.bentuk_pendidikan_id', $arrBentukPendidikan);
         }
 
         if($kode_wilayah){

@@ -78,7 +78,7 @@ class CalonPesertaDidikController extends Controller
 				DB::raw('(
 					SELECT ROW_NUMBER
 					() OVER (
-						PARTITION BY pilihan_sekolah.jalur_id 
+						PARTITION BY pilihan_sekolah.sekolah_id, pilihan_sekolah.jalur_id
 					ORDER BY
 						pilihan_sekolah.urut_pilihan ASC,
 						COALESCE ( konf.status, 0 ) DESC,
@@ -100,11 +100,14 @@ class CalonPesertaDidikController extends Controller
 				WHERE
 					pilihan_sekolah.soft_delete = 0 
 					AND calon_peserta_didik.soft_delete = 0 
+				-- ORDER BY
+				-- 	pilihan_sekolah.urut_pilihan ASC,
+				-- 	COALESCE ( konf.status, 0 ) DESC,
+				-- 	konf.last_update ASC,
+				-- 	pilihan_sekolah.create_date ASC
 				ORDER BY
-					pilihan_sekolah.urut_pilihan ASC,
-					COALESCE ( konf.status, 0 ) DESC,
-					konf.last_update ASC,
-					pilihan_sekolah.create_date ASC
+					pilihan_sekolah.sekolah_id,
+					pilihan_sekolah.jalur_id
 				) as urutan'), function ($join) {
 				$join->on('urutan.sekolah_id', '=', 'ppdb.pilihan_sekolah.sekolah_id');
 				$join->on('urutan.calon_peserta_didik_id','=','ppdb.pilihan_sekolah.calon_peserta_didik_id');
