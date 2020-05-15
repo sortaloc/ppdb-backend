@@ -346,8 +346,26 @@ class CalonPesertaDidikController extends Controller
 			], 201);
 	}
 
+	function distance($lat1, $lon1, $lat2, $lon2) { 
+        $pi80 = M_PI / 180; 
+        $lat1 *= $pi80; 
+        $lon1 *= $pi80; 
+        $lat2 *= $pi80; 
+        $lon2 *= $pi80; 
+        $r = 6372.797; // mean radius of Earth in km 
+        $dlat = $lat2 - $lat1; 
+        $dlon = $lon2 - $lon1; 
+        $a = sin($dlat / 2) * sin($dlat / 2) + cos($lat1) * cos($lat2) * sin($dlon / 2) * sin($dlon / 2); 
+        $c = 2 * atan2(sqrt($a), sqrt(1 - $a)); 
+        $km = $r * $c; 
+        //echo ' '.$km; 
+        return $km; 
+    }
+
 	public function getSekolahPilihan(Request $request){
 		$calon_peserta_didik_id = $request->input('calon_peserta_didik_id') ? $request->input('calon_peserta_didik_id') : null;
+		$lintang = $request->input('lintang') ? $request->input('lintang') : null;
+		$bujur = $request->input('bujur') ? $request->input('bujur') : null;
 	
 		$fetch_cek = DB::connection('sqlsrv_2')
 			->table('ppdb.pilihan_sekolah')
@@ -367,10 +385,16 @@ class CalonPesertaDidikController extends Controller
 				'sekolah.alamat_jalan as alamat',
 				'kec.nama as kecamatan',
 				'kab.nama as kabupaten',
-				'prov.nama as provinsi'
+				'prov.nama as provinsi',
+				'sekolah.lintang',
+				'sekolah.bujur'
 			)
 			->orderBy('urut_pilihan','ASC')
 			->get();
+
+			for ($i=0; $i < sizeof($fetch_cek); $i++) { 
+				$fetch_cek[$i]->jarak = self::distance($lintang,$bujur,$fetch_cek[$i]->lintang,$fetch_cek[$i]->bujur);
+			}
 		
 			return response([ 
 				'rows' => $fetch_cek,

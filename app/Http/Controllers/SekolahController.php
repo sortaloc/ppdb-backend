@@ -9,15 +9,34 @@ use DateTime;
 
 class SekolahController extends Controller
 {
+    function distance($lat1, $lon1, $lat2, $lon2) { 
+        $pi80 = M_PI / 180; 
+        $lat1 *= $pi80; 
+        $lon1 *= $pi80; 
+        $lat2 *= $pi80; 
+        $lon2 *= $pi80; 
+        $r = 6372.797; // mean radius of Earth in km 
+        $dlat = $lat2 - $lat1; 
+        $dlon = $lon2 - $lon1; 
+        $a = sin($dlat / 2) * sin($dlat / 2) + cos($lat1) * cos($lat2) * sin($dlon / 2) * sin($dlon / 2); 
+        $c = 2 * atan2(sqrt($a), sqrt(1 - $a)); 
+        $km = $r * $c; 
+        //echo ' '.$km; 
+        return $km; 
+    }
+
     public function index(Request $request)
     {
     	$limit = $request->limit ? $request->limit : 10;
-        $offset = $request->page ? ($request->page * $limit) : 0;
+        // $offset = $request->page ? ($request->page * $limit) : 0;
+        $start = $request->start ? $request->start : 0;
         $searchText = $request->searchText ? $request->searchText : '';
         $status_sekolah = $request->status_sekolah ? $request->status_sekolah : '';
         $kode_wilayah = $request->kode_wilayah ? $request->kode_wilayah : null;
         $id_level_wilayah = $request->id_level_wilayah ? $request->id_level_wilayah : 0;
         $bentuk_pendidikan_id = $request->bentuk_pendidikan_id ? $request->bentuk_pendidikan_id : null;
+        $lintang = $request->lintang ? $request->lintang : 0;
+        $bujur = $request->bujur ? $request->bujur : 0;
 
         $count = DB::connection('sqlsrv_2')->table('ppdb.sekolah AS sekolah')->where('sekolah.soft_delete', 0)
             ->join('ref.bentuk_pendidikan as bp','bp.bentuk_pendidikan_id','=','sekolah.bentuk_pendidikan_id')
@@ -33,8 +52,10 @@ class SekolahController extends Controller
 			->join('ref.mst_wilayah as prop','kab.mst_kode_wilayah','=','prop.kode_wilayah')
             ->leftJoin('ppdb.kuota_sekolah AS kouta', 'kouta.sekolah_id', '=', 'sekolah.sekolah_id')
         	->where('sekolah.soft_delete', 0)
-        	->limit($limit)
-            ->offset($offset)
+        	// ->limit($limit)
+            // ->offset($offset)
+            ->skip($start)
+            ->take($limit)
             ->select(
                 'sekolah.*',
                 'bp.nama as bentuk',
@@ -93,6 +114,9 @@ class SekolahController extends Controller
             $sekolahs[$i]->pendaftar = $pendaftar;
             $sekolahs[$i]->terima = $terima;
             $sekolahs[$i]->sisa_kouta = ($kouta - $terima);
+
+            $jarak = self::distance($lintang,$bujur,$key->lintang,$key->bujur);
+            $sekolahs[$i]->jarak = $jarak;
 
             $i++;
         }
