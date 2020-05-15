@@ -908,6 +908,7 @@ class CalonPesertaDidikController extends Controller
 			'#provinsi'		=> $calon_pd->provinsi,
 			'#lintang' 		=> $calon_pd->lintang,
 			'#bujur' 		=> $calon_pd->bujur,
+			'#jalur' 		=> @$pilihan_sekolah[0]->nama_jalur,
 			'#npsn1' 		=> @$pilihan_sekolah[0]->npsn,
 			'#sekolah1' 	=> @$pilihan_sekolah[0]->nama_sekolah,
 			'#npsn2' 		=> @$pilihan_sekolah[1]->npsn,
@@ -923,6 +924,7 @@ class CalonPesertaDidikController extends Controller
 			'#orang_tua_pekerjaan' 				=> $calon_pd['pekerjaan_'.$orangtua],
 			'#orang_tua_alamat_tempat_tinggal' 	=> $calon_pd['alamat_tempat_tinggal_'.$orangtua],
 			'#orang_tua_no_telepon' 			=> $calon_pd['no_telepon_'.$orangtua],
+			'#datenow' 		=> date("M Y")
 		);
 
 		$nama_file = 'Formulir_PPDB_2019.doc';
