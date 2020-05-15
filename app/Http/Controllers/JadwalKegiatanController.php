@@ -23,6 +23,8 @@ class JadwalKegiatanController extends Controller
 		    ->where('jadwal_kegiatan.soft_delete', 0)
 		    ->leftJoin('ref.jalur AS jalur', 'jadwal_kegiatan.jalur_id', '=', 'jalur.jalur_id')
 		    ->leftJoin('ref.mst_wilayah AS wilayah', 'jadwal_kegiatan.kode_wilayah', '=', 'wilayah.kode_wilayah');
+            
+        $countAll = $jadwal->count();
 
 	    $jadwal_limit = $jadwal->limit($limit)
 	    	->offset($offset)
@@ -32,7 +34,7 @@ class JadwalKegiatanController extends Controller
 	        [
 	            'rows' => $jadwal_limit,
 	            'count' => count($jadwal_limit),
-	            'countAll' => $jadwal->count()
+	            'countAll' => $countAll
 	        ],
 	        200
 	    );

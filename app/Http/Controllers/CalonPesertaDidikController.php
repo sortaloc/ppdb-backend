@@ -1011,38 +1011,70 @@ class CalonPesertaDidikController extends Controller
 			$urutan = "0000";
 		}
 
-    	$file = public_path('template_bukti_pendaftaran.rtf');
+  //   	$file = public_path('template_bukti_pendaftaran.rtf');
 		
-		$array = array(
-			'#no1'			=> substr($urutan, 0, 1),
-			'#no2'			=> substr($urutan, 1, 1),
-			'#no3'			=> substr($urutan, 2, 1),
-			'#no4'			=> substr($urutan, 3, 1),
-			'#nik' 			=> $calon_pd->nik,
-			'#nama' 		=> $calon_pd->nama,
-			'#nisn' 		=> $calon_pd->nisn,
-			'#tempat_lahir' => $calon_pd->tempat_lahir,
-			'#tgllhr_d' 	=> date("d", strtotime($calon_pd->tanggal_lahir)),
-			'#tgllhr_m' 	=> date("m", strtotime($calon_pd->tanggal_lahir)),
-			'#tgllhr_y' 	=> date("Y", strtotime($calon_pd->tanggal_lahir)),
-			'#lintang' 		=> $calon_pd->lintang,
-			'#bujur' 		=> $calon_pd->bujur,
-			'#asal_sekolah' => $calon_pd->asal_sekolah,
-			'#jalur' 		=> @$pilihan_sekolah[0]->nama_jalur,
-			'#npsn1' 		=> @$pilihan_sekolah[0]->npsn,
-			'#sekolah1' 	=> @$pilihan_sekolah[0]->nama_sekolah,
-			'#npsn2' 		=> @$pilihan_sekolah[1]->npsn,
-			'#sekolah2' 	=> @$pilihan_sekolah[1]->nama_sekolah,
-			'#npsn3' 		=> @$pilihan_sekolah[2]->npsn,
-			'#sekolah3' 	=> @$pilihan_sekolah[2]->nama_sekolah,
-			'#datenow' 		=> date("F Y"),
-			'#codeQR' 		=> '' //array('path' => "https://api.qrserver.com/v1/create-qr-code/?size=60x60&data={$calon_pd->nik}", 'width' => '0.7in', 'height' => '0.7in'),
-		);
+		// $array = array(
+		// 	'#no1'			=> substr($urutan, 0, 1),
+		// 	'#no2'			=> substr($urutan, 1, 1),
+		// 	'#no3'			=> substr($urutan, 2, 1),
+		// 	'#no4'			=> substr($urutan, 3, 1),
+		// 	'#nik' 			=> $calon_pd->nik,
+		// 	'#nama' 		=> $calon_pd->nama,
+		// 	'#nisn' 		=> $calon_pd->nisn,
+		// 	'#tempat_lahir' => $calon_pd->tempat_lahir,
+		// 	'#tgllhr_d' 	=> date("d", strtotime($calon_pd->tanggal_lahir)),
+		// 	'#tgllhr_m' 	=> date("m", strtotime($calon_pd->tanggal_lahir)),
+		// 	'#tgllhr_y' 	=> date("Y", strtotime($calon_pd->tanggal_lahir)),
+		// 	'#lintang' 		=> $calon_pd->lintang,
+		// 	'#bujur' 		=> $calon_pd->bujur,
+		// 	'#asal_sekolah' => $calon_pd->asal_sekolah,
+		// 	'#jalur' 		=> @$pilihan_sekolah[0]->nama_jalur,
+		// 	'#npsn1' 		=> @$pilihan_sekolah[0]->npsn,
+		// 	'#sekolah1' 	=> @$pilihan_sekolah[0]->nama_sekolah,
+		// 	'#npsn2' 		=> @$pilihan_sekolah[1]->npsn,
+		// 	'#sekolah2' 	=> @$pilihan_sekolah[1]->nama_sekolah,
+		// 	'#npsn3' 		=> @$pilihan_sekolah[2]->npsn,
+		// 	'#sekolah3' 	=> @$pilihan_sekolah[2]->nama_sekolah,
+		// 	'#datenow' 		=> date("F Y"),
+		// 	'#codeQR' 		=> '',
+		// );
 
-		$nama_file = 'Bukti_PPDB_2019.doc';
+		// $nama_file = 'Bukti_PPDB_2019.doc';
 
-		// return $array; die;
+		// // return $array; die;
 		
-		return WordTemplate::export($file, $array, $nama_file);
-    }
+		// return WordTemplate::export($file, $array, $nama_file);
+
+		$templateProcessor = new \PhpOffice\PhpWord\TemplateProcessor('template_bukti_pendaftaran.docx');
+
+        $templateProcessor->setValue('no1', substr($urutan, 0, 1));
+		$templateProcessor->setValue('no2', substr($urutan, 1, 1));
+		$templateProcessor->setValue('no3', substr($urutan, 2, 1));
+		$templateProcessor->setValue('no4', substr($urutan, 3, 1));
+		$templateProcessor->setValue('nik', $calon_pd->nik);
+		$templateProcessor->setValue('nama', $calon_pd->nama);
+		$templateProcessor->setValue('nisn', $calon_pd->nisn);
+		$templateProcessor->setValue('tempat_lahir', $calon_pd->tempat_lahir);
+		$templateProcessor->setValue('tgllhr_d', date("d", strtotime($calon_pd->tanggal_lahir)));
+		$templateProcessor->setValue('tgllhr_m', date("m", strtotime($calon_pd->tanggal_lahir)));
+		$templateProcessor->setValue('tgllhr_y', date("Y", strtotime($calon_pd->tanggal_lahir)));
+		$templateProcessor->setValue('lintang', $calon_pd->lintang);
+		$templateProcessor->setValue('bujur', $calon_pd->bujur);
+		$templateProcessor->setValue('asal_sekolah', $calon_pd->asal_sekolah);
+		$templateProcessor->setValue('jalur', @$pilihan_sekolah[0]->nama_jalur);
+		$templateProcessor->setValue('npsn1', @$pilihan_sekolah[0]->npsn);
+		$templateProcessor->setValue('sekolah1', @$pilihan_sekolah[0]->nama_sekolah);
+		$templateProcessor->setValue('npsn2', @$pilihan_sekolah[1]->npsn);
+		$templateProcessor->setValue('sekolah2', @$pilihan_sekolah[1]->nama_sekolah);
+		$templateProcessor->setValue('npsn3', @$pilihan_sekolah[2]->npsn);
+		$templateProcessor->setValue('sekolah3', @$pilihan_sekolah[2]->nama_sekolah);
+		$templateProcessor->setValue('datenow', date("F Y"));
+        $templateProcessor->setImageValue('codeQR', array('path' => "https://api.qrserver.com/v1/create-qr-code/?size=60x60&data={$calon_pd->nik}", 'width' => '1in', 'height' => '1in'));
+
+
+        // $templateProcessor->deleteBlock('DELETEME');
+        header('Content-Type: application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+        header('Content-Disposition: attachment;filename="Bukti_PPDB_2019.docx"');
+        $templateProcessor->saveAs('php://output');
+}
 }
