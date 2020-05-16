@@ -912,6 +912,7 @@ class CalonPesertaDidikController extends Controller
     	$templateProcessor = new \PhpOffice\PhpWord\TemplateProcessor('template_formulir_pendaftaran.docx');
 
     	$orangtua = $calon_pd->orang_tua_utama;
+
 		$templateProcessor->setValue('nik', $calon_pd->nik);
 		$templateProcessor->setValue('no1', substr($urutan, 0, 1));
 		$templateProcessor->setValue('no2', substr($urutan, 1, 1));
@@ -927,6 +928,7 @@ class CalonPesertaDidikController extends Controller
 		$templateProcessor->setValue('alamat_tempat_tinggal', $calon_pd->alamat_tempat_tinggal);
 		$templateProcessor->setValue('rt', $calon_pd->rt);
 		$templateProcessor->setValue('rw', $calon_pd->rw);
+		$templateProcessor->setValue('desa', '');
 		$templateProcessor->setValue('dusun', $calon_pd->dusun);
 		$templateProcessor->setValue('kecamatan', $calon_pd->kecamatan);
 		$templateProcessor->setValue('kabupaten', $calon_pd->kabupaten);
