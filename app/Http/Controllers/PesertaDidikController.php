@@ -31,6 +31,11 @@ class PesertaDidikController extends Controller
 				// ->on('calon_peserta_didik.nisn','=','peserta_didik.nisn')
 				->on('calon_peserta_didik.soft_delete','=',DB::raw('0'));
 			})
+			->leftJoin('ppdb.calon_peserta_didik as calon_peserta_didik_nisn', function ($join) {
+				$join->on('calon_peserta_didik_nisn.nisn', '=', 'peserta_didik.nisn')
+				// ->on('calon_peserta_didik.nisn','=','peserta_didik.nisn')
+				->on('calon_peserta_didik_nisn.soft_delete','=',DB::raw('0'));
+			})
 			->skip($start)
 			->take($limit)
 			->orderBy('peserta_didik.nama', 'ASC')
@@ -39,7 +44,7 @@ class PesertaDidikController extends Controller
 				'kec.nama as kecamatan',
 				'kab.nama as kabupaten',
 				'prop.nama as provinsi',
-				'calon_peserta_didik.calon_peserta_didik_id as flag_pendaftar'
+				DB::raw("(case when calon_peserta_didik.calon_peserta_didik_id is not null then calon_peserta_didik.calon_peserta_didik_id else (case when calon_peserta_didik_nisn.calon_peserta_didik_id is not null then calon_peserta_didik_nisn.calon_peserta_didik_id else null end) end) as flag_pendaftar")
 			);
 
 	    if($request->searchText){

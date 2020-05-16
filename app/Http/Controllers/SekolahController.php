@@ -80,6 +80,9 @@ class SekolahController extends Controller
 
         	$count = $count->whereIn('sekolah.bentuk_pendidikan_id', $arrBentukPendidikan);
         	$sekolahs = $sekolahs->whereIn('sekolah.bentuk_pendidikan_id', $arrBentukPendidikan);
+        }else{
+            $count = $count->whereIn('sekolah.bentuk_pendidikan_id', array(5,6,9,10));
+        	$sekolahs = $sekolahs->whereIn('sekolah.bentuk_pendidikan_id', array(5,6,9,10));
         }
 
         if($kode_wilayah){
@@ -100,6 +103,8 @@ class SekolahController extends Controller
         if($request->sekolah_id){
             $sekolahs->limit(1)->where('sekolah_id', $request->sekolah_id);
         }
+
+        // return $sekolahs->toSql();die;
 
         $count = $count->count();
         $sekolahs = $sekolahs->get();

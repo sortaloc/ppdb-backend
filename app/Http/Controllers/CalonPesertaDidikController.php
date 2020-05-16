@@ -466,7 +466,7 @@ class CalonPesertaDidikController extends Controller
 			->table('ppdb.pilihan_sekolah')
 			->where('sekolah_id','=', $obj_sekolah_pilihan[$i]['sekolah_id'])
 			->where('calon_peserta_didik_id','=', $calon_peserta_didik_id)
-			->where('soft_delete','=',0)
+			// ->where('soft_delete','=',0)
 			->get();
 
 			if(sizeof($fetch_cek) > 0){
