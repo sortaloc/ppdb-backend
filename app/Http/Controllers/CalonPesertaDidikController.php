@@ -909,56 +909,52 @@ class CalonPesertaDidikController extends Controller
 			$urutan = "0000";
 		}
 
-    	$file = public_path('template_formulir_pendaftaran.rtf');
+    	$templateProcessor = new \PhpOffice\PhpWord\TemplateProcessor('template_formulir_pendaftaran.docx');
 
     	$orangtua = $calon_pd->orang_tua_utama;
-		
-		$array = array(
-			'#no1'			=> substr($urutan, 0, 1),
-			'#no2'			=> substr($urutan, 1, 1),
-			'#no3'			=> substr($urutan, 2, 1),
-			'#no4'			=> substr($urutan, 3, 1),
-			'#nama' 		=> $calon_pd->nama,
-			'#nik' 			=> $calon_pd->nik,
-			'#jenis_kelamin' => $calon_pd->jenis_kelamin == 'L' ? 'Laki - laki' : $calon_pd->jenis_kelamin == 'P' ? 'Perempuan' : '',
-			'#tempat_lahir' => $calon_pd->tempat_lahir,
-			'#tgllhr_d' 	=> date("d", strtotime($calon_pd->tanggal_lahir)),
-			'#tgllhr_m' 	=> date("m", strtotime($calon_pd->tanggal_lahir)),
-			'#tgllhr_y' 	=> date("Y", strtotime($calon_pd->tanggal_lahir)),
-			'#asal_sekolah' => $calon_pd->asal_sekolah,
-			'#alamat_tempat_tinggal' => $calon_pd->alamat_tempat_tinggal,
-			'#rt' 			=> $calon_pd->rt,
-			'#rw' 			=> $calon_pd->rw,
-			'#dusun' 		=> $calon_pd->dusun,
-			'#kecamatan' 	=> $calon_pd->kecamatan,
-			'#kabupaten' 	=> $calon_pd->kabupaten,
-			'#provinsi'		=> $calon_pd->provinsi,
-			'#lintang' 		=> $calon_pd->lintang,
-			'#bujur' 		=> $calon_pd->bujur,
-			'#jalur' 		=> @$pilihan_sekolah[0]->nama_jalur,
-			'#npsn1' 		=> @$pilihan_sekolah[0]->npsn,
-			'#sekolah1' 	=> @$pilihan_sekolah[0]->nama_sekolah,
-			'#npsn2' 		=> @$pilihan_sekolah[1]->npsn,
-			'#sekolah2' 	=> @$pilihan_sekolah[1]->nama_sekolah,
-			'#npsn3' 		=> @$pilihan_sekolah[2]->npsn,
-			'#sekolah3' 	=> @$pilihan_sekolah[2]->nama_sekolah,
-			'#orang_tua_utama' 			=> $calon_pd['nama_'.$orangtua],
-			'#orang_tua_tempat_lahir' 	=> $calon_pd->tempat_lahir_ayah,
-			'#ort_t_d' 		=> date("d", strtotime( $calon_pd['tanggal_lahir_'.$orangtua] )),
-			'#ort_t_m' 		=> date("m", strtotime( $calon_pd['tanggal_lahir_'.$orangtua] )),
-			'#ort_t_y' 		=> date("Y", strtotime( $calon_pd['tanggal_lahir_'.$orangtua] )),
-			'#orang_tua_pendidikan'	 			=> $calon_pd['pendidikan_terakhir_'.$orangtua],
-			'#orang_tua_pekerjaan' 				=> $calon_pd['pekerjaan_'.$orangtua],
-			'#orang_tua_alamat_tempat_tinggal' 	=> $calon_pd['alamat_tempat_tinggal_'.$orangtua],
-			'#orang_tua_no_telepon' 			=> $calon_pd['no_telepon_'.$orangtua],
-			'#datenow' 		=> date("M Y")
-		);
+		$templateProcessor->setValue('nik', $calon_pd->nik);
+		$templateProcessor->setValue('no1', substr($urutan, 0, 1));
+		$templateProcessor->setValue('no2', substr($urutan, 1, 1));
+		$templateProcessor->setValue('no3', substr($urutan, 2, 1));
+		$templateProcessor->setValue('no4', substr($urutan, 3, 1));
+		$templateProcessor->setValue('nama', $calon_pd->nama);
+		$templateProcessor->setValue('jenis_kelamin', $calon_pd->jenis_kelamin == 'L' ? 'Laki - laki' : $calon_pd->jenis_kelamin == 'P' ? 'Perempuan' : '');
+		$templateProcessor->setValue('tempat_lahir', $calon_pd->tempat_lahir);
+		$templateProcessor->setValue('tgllhrd', date("d", strtotime($calon_pd->tanggal_lahir)));
+		$templateProcessor->setValue('tgllhrm', date("m", strtotime($calon_pd->tanggal_lahir)));
+		$templateProcessor->setValue('tgllhry', date("Y", strtotime($calon_pd->tanggal_lahir)));
+		$templateProcessor->setValue('asal_sekolah', $calon_pd->asal_sekolah);
+		$templateProcessor->setValue('alamat_tempat_tinggal', $calon_pd->alamat_tempat_tinggal);
+		$templateProcessor->setValue('rt', $calon_pd->rt);
+		$templateProcessor->setValue('rw', $calon_pd->rw);
+		$templateProcessor->setValue('dusun', $calon_pd->dusun);
+		$templateProcessor->setValue('kecamatan', $calon_pd->kecamatan);
+		$templateProcessor->setValue('kabupaten', $calon_pd->kabupaten);
+		$templateProcessor->setValue('provinsi', $calon_pd->provinsi);
+		$templateProcessor->setValue('lintang', $calon_pd->lintang);
+		$templateProcessor->setValue('bujur', $calon_pd->bujur);
+		$templateProcessor->setValue('jalur', @$pilihan_sekolah[0]->nama_jalur);
+		$templateProcessor->setValue('npsn1', @$pilihan_sekolah[0]->npsn);
+		$templateProcessor->setValue('sekolah1', @$pilihan_sekolah[0]->nama_sekolah);
+		$templateProcessor->setValue('npsn2', @$pilihan_sekolah[1]->npsn);
+		$templateProcessor->setValue('sekolah2', @$pilihan_sekolah[1]->nama_sekolah);
+		$templateProcessor->setValue('npsn3', @$pilihan_sekolah[2]->npsn);
+		$templateProcessor->setValue('sekolah3', @$pilihan_sekolah[2]->nama_sekolah);
+		$templateProcessor->setValue('orang_tua_utama', $calon_pd['nama_'.$orangtua]);
+		$templateProcessor->setValue('orang_tua_tempat_lahir', $calon_pd->tempat_lahir_ayah);
+		$templateProcessor->setValue('orttd', date("d", strtotime( $calon_pd['tanggal_lahir_'.$orangtua] )));
+		$templateProcessor->setValue('orttm', date("m", strtotime( $calon_pd['tanggal_lahir_'.$orangtua] )));
+		$templateProcessor->setValue('ortty', date("Y", strtotime( $calon_pd['tanggal_lahir_'.$orangtua] )));
+		$templateProcessor->setValue('orang_tua_pendidikan', $calon_pd['pendidikan_terakhir_'.$orangtua]);
+		$templateProcessor->setValue('orang_tua_pekerjaan', $calon_pd['pekerjaan_'.$orangtua]);
+		$templateProcessor->setValue('orang_tua_alamat_tempat_tinggal', $calon_pd['alamat_tempat_tinggal_'.$orangtua]);
+		$templateProcessor->setValue('orang_tua_no_telepon', $calon_pd['no_telepon_'.$orangtua]);
+		$templateProcessor->setValue('datenow', date("d M Y"));
 
-		$nama_file = 'Formulir_PPDB_2019.doc';
+		header('Content-Type: application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+        header('Content-Disposition: attachment;filename="Formulir_PPDB_'.date("Y").'.docx"');
+        $templateProcessor->saveAs('php://output');
 
-		// return $array; die;
-		
-		return WordTemplate::export($file, $array, $nama_file);
     }
 
     public function print_bukti($id)
@@ -1103,7 +1099,7 @@ class CalonPesertaDidikController extends Controller
 
         // $templateProcessor->deleteBlock('DELETEME');
         header('Content-Type: application/vnd.openxmlformats-officedocument.wordprocessingml.document');
-        header('Content-Disposition: attachment;filename="Bukti_PPDB_2019.docx"');
+        header('Content-Disposition: attachment;filename="Bukti_PPDB_'.date("Y").'.docx"');
         $templateProcessor->saveAs('php://output');
 }
 }
