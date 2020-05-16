@@ -847,7 +847,7 @@ class CalonPesertaDidikController extends Controller
 				DB::raw('(
 					SELECT ROW_NUMBER
 					() OVER (
-						PARTITION BY pilihan_sekolah.jalur_id 
+						PARTITION BY pilihan_sekolah.sekolah_id, pilihan_sekolah.jalur_id
 					ORDER BY
 						pilihan_sekolah.urut_pilihan ASC,
 						COALESCE ( konf.status, 0 ) DESC,
@@ -869,11 +869,14 @@ class CalonPesertaDidikController extends Controller
 				WHERE
 					pilihan_sekolah.soft_delete = 0 
 					AND calon_peserta_didik.soft_delete = 0 
+				-- ORDER BY
+				-- 	pilihan_sekolah.urut_pilihan ASC,
+				-- 	COALESCE ( konf.status, 0 ) DESC,
+				-- 	konf.last_update ASC,
+				-- 	pilihan_sekolah.create_date ASC
 				ORDER BY
-					pilihan_sekolah.urut_pilihan ASC,
-					COALESCE ( konf.status, 0 ) DESC,
-					konf.last_update ASC,
-					pilihan_sekolah.create_date ASC
+					pilihan_sekolah.sekolah_id,
+					pilihan_sekolah.jalur_id
 				) as urutan'), function ($join) {
 				$join->on('urutan.sekolah_id', '=', 'ppdb.pilihan_sekolah.sekolah_id');
 				$join->on('urutan.calon_peserta_didik_id','=','ppdb.pilihan_sekolah.calon_peserta_didik_id');
@@ -894,6 +897,8 @@ class CalonPesertaDidikController extends Controller
     	if(count($pilihan_sekolah) >= 1){
 			$urutan = @$pilihan_sekolah[0]->urutan;
 
+			// return $urutan;die;
+
 			switch (strlen($urutan)) {
 				case 1: $nol = "000"; break;
 				case 2: $nol = "00"; break;
@@ -909,25 +914,51 @@ class CalonPesertaDidikController extends Controller
 			$urutan = "0000";
 		}
 
+		// return $calon_pd;die;
+
+		$arrBulan = [
+			'Januari',
+			'Februari',
+			'Maret',
+			'April',
+			'Mei',
+			'Juni',
+			'Juli',
+			'Agustus',
+			'September',
+			'Oktober',
+			'November',
+			'Desember'
+		];
+
     	$templateProcessor = new \PhpOffice\PhpWord\TemplateProcessor('template_formulir_pendaftaran.docx');
 
     	$orangtua = $calon_pd->orang_tua_utama;
 		$templateProcessor->setValue('nik', $calon_pd->nik);
+		$templateProcessor->setValue('no_npsn1', substr(@$pilihan_sekolah[0]->npsn,0,1));
+		$templateProcessor->setValue('no_npsn2', substr(@$pilihan_sekolah[0]->npsn,1,1));
+		$templateProcessor->setValue('no_npsn3', substr(@$pilihan_sekolah[0]->npsn,2,1));
+		$templateProcessor->setValue('no_npsn4', substr(@$pilihan_sekolah[0]->npsn,3,1));
+		$templateProcessor->setValue('no_npsn5', substr(@$pilihan_sekolah[0]->npsn,4,1));
+		$templateProcessor->setValue('no_npsn6', substr(@$pilihan_sekolah[0]->npsn,5,1));
+		$templateProcessor->setValue('no_npsn7', substr(@$pilihan_sekolah[0]->npsn,6,1));
+		$templateProcessor->setValue('no_npsn8', substr(@$pilihan_sekolah[0]->npsn,7,1));
 		$templateProcessor->setValue('no1', substr($urutan, 0, 1));
 		$templateProcessor->setValue('no2', substr($urutan, 1, 1));
 		$templateProcessor->setValue('no3', substr($urutan, 2, 1));
 		$templateProcessor->setValue('no4', substr($urutan, 3, 1));
 		$templateProcessor->setValue('nama', $calon_pd->nama);
-		$templateProcessor->setValue('jenis_kelamin', $calon_pd->jenis_kelamin == 'L' ? 'Laki - laki' : $calon_pd->jenis_kelamin == 'P' ? 'Perempuan' : '');
+		$templateProcessor->setValue('jenis_kelamin', $calon_pd->jenis_kelamin == 'L' ? 'Laki - laki' : 'Perempuan');
 		$templateProcessor->setValue('tempat_lahir', $calon_pd->tempat_lahir);
 		$templateProcessor->setValue('tgllhrd', date("d", strtotime($calon_pd->tanggal_lahir)));
 		$templateProcessor->setValue('tgllhrm', date("m", strtotime($calon_pd->tanggal_lahir)));
 		$templateProcessor->setValue('tgllhry', date("Y", strtotime($calon_pd->tanggal_lahir)));
 		$templateProcessor->setValue('asal_sekolah', $calon_pd->asal_sekolah);
-		$templateProcessor->setValue('alamat_tempat_tinggal', $calon_pd->alamat_tempat_tinggal);
+		$templateProcessor->setValue('alamat_jalan', $calon_pd->alamat_tempat_tinggal);
 		$templateProcessor->setValue('rt', $calon_pd->rt);
 		$templateProcessor->setValue('rw', $calon_pd->rw);
 		$templateProcessor->setValue('dusun', $calon_pd->dusun);
+		$templateProcessor->setValue('desa', $calon_pd->desa_kelurahan);
 		$templateProcessor->setValue('kecamatan', $calon_pd->kecamatan);
 		$templateProcessor->setValue('kabupaten', $calon_pd->kabupaten);
 		$templateProcessor->setValue('provinsi', $calon_pd->provinsi);
@@ -949,10 +980,11 @@ class CalonPesertaDidikController extends Controller
 		$templateProcessor->setValue('orang_tua_pekerjaan', $calon_pd['pekerjaan_'.$orangtua]);
 		$templateProcessor->setValue('orang_tua_alamat_tempat_tinggal', $calon_pd['alamat_tempat_tinggal_'.$orangtua]);
 		$templateProcessor->setValue('orang_tua_no_telepon', $calon_pd['no_telepon_'.$orangtua]);
-		$templateProcessor->setValue('datenow', date("d M Y"));
+		$templateProcessor->setValue('datenow', date("d") . " " . $arrBulan[(int)date("m")-1] . " " . date("Y"));
+		// $templateProcessor->setValue('datenow', date("d M Y"));
 
 		header('Content-Type: application/vnd.openxmlformats-officedocument.wordprocessingml.document');
-        header('Content-Disposition: attachment;filename="Formulir_PPDB_'.date("Y").'.docx"');
+        header('Content-Disposition: attachment;filename="Formulir_PPDB_'.date("Y").'-'.$calon_pd->nik.'.docx"');
         $templateProcessor->saveAs('php://output');
 
     }
@@ -974,7 +1006,7 @@ class CalonPesertaDidikController extends Controller
 				DB::raw('(
 					SELECT ROW_NUMBER
 					() OVER (
-						PARTITION BY pilihan_sekolah.jalur_id 
+						PARTITION BY pilihan_sekolah.sekolah_id, pilihan_sekolah.jalur_id
 					ORDER BY
 						pilihan_sekolah.urut_pilihan ASC,
 						COALESCE ( konf.status, 0 ) DESC,
@@ -996,11 +1028,14 @@ class CalonPesertaDidikController extends Controller
 				WHERE
 					pilihan_sekolah.soft_delete = 0 
 					AND calon_peserta_didik.soft_delete = 0 
+				-- ORDER BY
+				-- 	pilihan_sekolah.urut_pilihan ASC,
+				-- 	COALESCE ( konf.status, 0 ) DESC,
+				-- 	konf.last_update ASC,
+				-- 	pilihan_sekolah.create_date ASC
 				ORDER BY
-					pilihan_sekolah.urut_pilihan ASC,
-					COALESCE ( konf.status, 0 ) DESC,
-					konf.last_update ASC,
-					pilihan_sekolah.create_date ASC
+					pilihan_sekolah.sekolah_id,
+					pilihan_sekolah.jalur_id
 				) as urutan'), function ($join) {
 				$join->on('urutan.sekolah_id', '=', 'ppdb.pilihan_sekolah.sekolah_id');
 				$join->on('urutan.calon_peserta_didik_id','=','ppdb.pilihan_sekolah.calon_peserta_didik_id');
@@ -1070,8 +1105,33 @@ class CalonPesertaDidikController extends Controller
 		
 		// return WordTemplate::export($file, $array, $nama_file);
 
+		// return $calon_pd;die;
+
+		$arrBulan = [
+			'Januari',
+			'Februari',
+			'Maret',
+			'April',
+			'Mei',
+			'Juni',
+			'Juli',
+			'Agustus',
+			'September',
+			'Oktober',
+			'November',
+			'Desember'
+		];
+
 		$templateProcessor = new \PhpOffice\PhpWord\TemplateProcessor('template_bukti_pendaftaran.docx');
 
+		$templateProcessor->setValue('no_npsn1', substr(@$pilihan_sekolah[0]->npsn,0,1));
+		$templateProcessor->setValue('no_npsn2', substr(@$pilihan_sekolah[0]->npsn,1,1));
+		$templateProcessor->setValue('no_npsn3', substr(@$pilihan_sekolah[0]->npsn,2,1));
+		$templateProcessor->setValue('no_npsn4', substr(@$pilihan_sekolah[0]->npsn,3,1));
+		$templateProcessor->setValue('no_npsn5', substr(@$pilihan_sekolah[0]->npsn,4,1));
+		$templateProcessor->setValue('no_npsn6', substr(@$pilihan_sekolah[0]->npsn,5,1));
+		$templateProcessor->setValue('no_npsn7', substr(@$pilihan_sekolah[0]->npsn,6,1));
+		$templateProcessor->setValue('no_npsn8', substr(@$pilihan_sekolah[0]->npsn,7,1));
         $templateProcessor->setValue('no1', substr($urutan, 0, 1));
 		$templateProcessor->setValue('no2', substr($urutan, 1, 1));
 		$templateProcessor->setValue('no3', substr($urutan, 2, 1));
@@ -1080,6 +1140,7 @@ class CalonPesertaDidikController extends Controller
 		$templateProcessor->setValue('nama', $calon_pd->nama);
 		$templateProcessor->setValue('nisn', $calon_pd->nisn);
 		$templateProcessor->setValue('tempat_lahir', $calon_pd->tempat_lahir);
+		$templateProcessor->setValue('alamat_jalan', $calon_pd->alamat_tempat_tinggal);
 		$templateProcessor->setValue('tgllhr_d', date("d", strtotime($calon_pd->tanggal_lahir)));
 		$templateProcessor->setValue('tgllhr_m', date("m", strtotime($calon_pd->tanggal_lahir)));
 		$templateProcessor->setValue('tgllhr_y', date("Y", strtotime($calon_pd->tanggal_lahir)));
@@ -1093,13 +1154,14 @@ class CalonPesertaDidikController extends Controller
 		$templateProcessor->setValue('sekolah2', @$pilihan_sekolah[1]->nama_sekolah);
 		$templateProcessor->setValue('npsn3', @$pilihan_sekolah[2]->npsn);
 		$templateProcessor->setValue('sekolah3', @$pilihan_sekolah[2]->nama_sekolah);
-		$templateProcessor->setValue('datenow', date("F Y"));
+		$templateProcessor->setValue('datenow', date("d") . " " . $arrBulan[(int)date("m")-1] . " " . date("Y"));
+		// $templateProcessor->setValue('datenow', date("F Y"));
         $templateProcessor->setImageValue('codeQR', array('path' => "https://api.qrserver.com/v1/create-qr-code/?size=60x60&data={$calon_pd->nik}", 'width' => '1in', 'height' => '1in'));
 
 
         // $templateProcessor->deleteBlock('DELETEME');
         header('Content-Type: application/vnd.openxmlformats-officedocument.wordprocessingml.document');
-        header('Content-Disposition: attachment;filename="Bukti_PPDB_'.date("Y").'.docx"');
+        header('Content-Disposition: attachment;filename="Bukti_PPDB_'.date("Y").'-'.$calon_pd->nik.'.docx"');
         $templateProcessor->saveAs('php://output');
 }
 }
