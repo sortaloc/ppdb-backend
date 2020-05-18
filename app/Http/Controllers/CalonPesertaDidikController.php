@@ -13,8 +13,8 @@ class CalonPesertaDidikController extends Controller
 {
 	public function index(Request $request)
 	{
-		$limit = $request->limit ? $request->limit : 10;
-	    $offset = $request->page ? ($request->page * $limit) : 0;
+		$limit = $request->limit ? $request->limit : 20;
+	    $start = $request->start ? $request->start : 0;
 	    $calon_peserta_didik_id = $request->calon_peserta_didik_id ? ($request->calon_peserta_didik_id != 'null' ? $request->calon_peserta_didik_id : null) : null;
 	    $searchText = $request->searchText ? $request->searchText : null;
 	    $pengguna_id = $request->pengguna_id ? $request->pengguna_id : null;
@@ -26,8 +26,8 @@ class CalonPesertaDidikController extends Controller
 			->leftJoin('ref.mst_wilayah AS kab', 'kab.kode_wilayah', '=', 'ppdb.calon_peserta_didik.kode_wilayah_kabupaten')
 			->leftJoin('ref.mst_wilayah AS prov', 'prov.kode_wilayah', '=', 'ppdb.calon_peserta_didik.kode_wilayah_provinsi')
 			->leftJoin('pengguna', 'pengguna.pengguna_id', '=', 'calon_peserta_didik.pengguna_id')
-	    	->limit($limit)
-			->offset($offset)
+	    	->take($limit)
+			->skip($start)
 			->select(
 				'ppdb.calon_peserta_didik.*',
 				'sekolah.nama AS sekolah_asal',
@@ -700,8 +700,8 @@ class CalonPesertaDidikController extends Controller
 				"alamat_tempat_tinggal" => $request->input('alamat_tempat_tinggal'), 
 				"kode_wilayah_kecamatan" => $request->input('kode_wilayah_kecamatan'), 
 				"kode_pos" => $request->input('kode_pos'), 
-				"lintang" => $request->input('lintang'), 
-				"bujur" => $request->input('bujur'), 
+				"lintang" => str_replace(",",".",$request->input('lintang')), 
+				"bujur" => str_replace(",",".",$request->input('bujur')), 
 				"nama_ayah" => $request->input('nama_ayah'), 
 				"tempat_lahir_ayah" => $request->input('tempat_lahir_ayah'), 
 				"tanggal_lahir_ayah" => $request->input('tanggal_lahir_ayah'), 
@@ -756,8 +756,8 @@ class CalonPesertaDidikController extends Controller
 				"alamat_tempat_tinggal" => $request->input('alamat_tempat_tinggal'), 
 				"kode_wilayah_kecamatan" => $request->input('kode_wilayah_kecamatan'), 
 				"kode_pos" => $request->input('kode_pos'), 
-				"lintang" => $request->input('lintang'), 
-				"bujur" => $request->input('bujur'), 
+				"lintang" => str_replace(",",".",$request->input('lintang')), 
+				"bujur" => str_replace(",",".",$request->input('bujur')), 
 				"nama_ayah" => $request->input('nama_ayah'), 
 				"tempat_lahir_ayah" => $request->input('tempat_lahir_ayah'), 
 				"tanggal_lahir_ayah" => $request->input('tanggal_lahir_ayah'), 

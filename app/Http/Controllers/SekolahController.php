@@ -37,6 +37,7 @@ class SekolahController extends Controller
         $bentuk_pendidikan_id = $request->bentuk_pendidikan_id ? $request->bentuk_pendidikan_id : null;
         $lintang = $request->lintang ? $request->lintang : 0;
         $bujur = $request->bujur ? $request->bujur : 0;
+        $nomor_pilihan = $request->nomor_pilihan ? $request->nomor_pilihan : null;
 
         $count = DB::connection('sqlsrv_2')->table('ppdb.sekolah AS sekolah')->where('sekolah.soft_delete', 0)
             ->join('ref.bentuk_pendidikan as bp','bp.bentuk_pendidikan_id','=','sekolah.bentuk_pendidikan_id')
@@ -111,7 +112,14 @@ class SekolahController extends Controller
 
         $i = 0;
         foreach ($sekolahs as $key) {
-            $pendaftar = PilihanSekolah::where('sekolah_id', $key->sekolah_id)->where('soft_delete', 0)->count();
+            $pendaftar = PilihanSekolah::where('sekolah_id', $key->sekolah_id)->where('soft_delete', 0);
+
+            if($nomor_pilihan){
+                $pendaftar->where('urut_pilihan','=',$nomor_pilihan);
+            }
+
+
+            $pendaftar = $pendaftar->count();
             $kouta = $key->kouta;
             $terima = 0;
 
