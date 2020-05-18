@@ -102,7 +102,7 @@ class SekolahController extends Controller
 			}
 		}
         if($request->sekolah_id){
-            $sekolahs->limit(1)->where('sekolah_id', $request->sekolah_id);
+            $sekolahs->limit(1)->where('sekolah.sekolah_id', $request->sekolah_id);
         }
 
         // return $sekolahs->toSql();die;
