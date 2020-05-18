@@ -246,48 +246,50 @@ class CalonPesertaDidikController extends Controller
     {
         $data = $request->all();
         $file = $data['image'];
-        // $pengguna_id = $data['pengguna_id'];
+        $peserta_didik_id = $data['id'];
         $jenis = $data['jenis'];
 
         if(($file == 'undefined') OR ($file == '')){
             return response()->json(['msg' => 'tidak_ada_file']);
-        }
+		}
+		
+		switch ($jenis) {
+			case 'file_gambar_pas_foto':
+				$jenis_berkas_id = 8;
+				break;
+			case 'file_gambar_kk':
+				$jenis_berkas_id = 1;
+				break;
+			case 'file_gambar_kip':
+				$jenis_berkas_id = 7;
+				break;
+			case 'file_gambar_surat_tidak_mampu':
+				$jenis_berkas_id = 9;
+				break;
+			case 'file_gambar_surat_pindah':
+				$jenis_berkas_id = 10;
+				break;
+			case 'file_gambar_piagam':
+				$jenis_berkas_id = 5;
+				break;
+			default:
+				$jenis_berkas_id = 8;
+				break;
+		}
 
         $ext = $file->getClientOriginalExtension();
         $name = $file->getClientOriginalName();
 
         $destinationPath = base_path('/public/assets/berkas');
-        $upload = $file->move($destinationPath, $name);
+        $upload = $file->move($destinationPath, $peserta_didik_id."-".$jenis_berkas_id."-".date('Y-m-d H:i:s').".".$ext);
+        // $upload = $file->move($destinationPath, $name);
 
         $msg = $upload ? 'sukses' : 'gagal';
 
         if($upload){
 
-			switch ($jenis) {
-				case 'file_gambar_pas_foto':
-					$jenis_berkas_id = 8;
-					break;
-				case 'file_gambar_kk':
-					$jenis_berkas_id = 1;
-					break;
-				case 'file_gambar_kip':
-					$jenis_berkas_id = 7;
-					break;
-				case 'file_gambar_surat_tidak_mampu':
-					$jenis_berkas_id = 9;
-					break;
-				case 'file_gambar_surat_pindah':
-					$jenis_berkas_id = 10;
-					break;
-				case 'file_gambar_piagam':
-					$jenis_berkas_id = 5;
-					break;
-				default:
-					$jenis_berkas_id = 8;
-					break;
-			}
-
-			return response(['msg' => $msg, 'filename' => "/assets/berkas/".$name, 'jenis' => $jenis, 'jenis_berkas_id' => $jenis_berkas_id]);
+			return response(['msg' => $msg, 'filename' => "/assets/berkas/".$peserta_didik_id."-".$jenis_berkas_id."-".date('Y-m-d H:i:s').".".$ext, 'jenis' => $jenis, 'jenis_berkas_id' => $jenis_berkas_id]);
+			// return response(['msg' => $msg, 'filename' => "/assets/berkas/".$name, 'jenis' => $jenis, 'jenis_berkas_id' => $jenis_berkas_id]);
 
             // $execute = DB::connection('sqlsrv_2')->table('pengguna')->where('pengguna_id','=',$pengguna_id)->update([
             //     $jenis => "/assets/berkas/".$name
