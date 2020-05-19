@@ -947,6 +947,10 @@ class CalonPesertaDidikController extends Controller
 		$templateProcessor->setValue('no_npsn6', substr(@$pilihan_sekolah[0]->npsn,5,1));
 		$templateProcessor->setValue('no_npsn7', substr(@$pilihan_sekolah[0]->npsn,6,1));
 		$templateProcessor->setValue('no_npsn8', substr(@$pilihan_sekolah[0]->npsn,7,1));
+		$templateProcessor->setValue('no_jalur1', substr(@$pilihan_sekolah[0]->jalur_id,0,1));
+		$templateProcessor->setValue('no_jalur2', substr(@$pilihan_sekolah[0]->jalur_id,1,1));
+		$templateProcessor->setValue('no_jalur3', substr(@$pilihan_sekolah[0]->jalur_id,2,1));
+		$templateProcessor->setValue('no_jalur4', substr(@$pilihan_sekolah[0]->jalur_id,3,1));
 		$templateProcessor->setValue('no1', substr($urutan, 0, 1));
 		$templateProcessor->setValue('no2', substr($urutan, 1, 1));
 		$templateProcessor->setValue('no3', substr($urutan, 2, 1));
@@ -1137,6 +1141,10 @@ class CalonPesertaDidikController extends Controller
 		$templateProcessor->setValue('no_npsn6', substr(@$pilihan_sekolah[0]->npsn,5,1));
 		$templateProcessor->setValue('no_npsn7', substr(@$pilihan_sekolah[0]->npsn,6,1));
 		$templateProcessor->setValue('no_npsn8', substr(@$pilihan_sekolah[0]->npsn,7,1));
+		$templateProcessor->setValue('no_jalur1', substr(@$pilihan_sekolah[0]->jalur_id,0,1));
+		$templateProcessor->setValue('no_jalur2', substr(@$pilihan_sekolah[0]->jalur_id,1,1));
+		$templateProcessor->setValue('no_jalur3', substr(@$pilihan_sekolah[0]->jalur_id,2,1));
+		$templateProcessor->setValue('no_jalur4', substr(@$pilihan_sekolah[0]->jalur_id,3,1));
         $templateProcessor->setValue('no1', substr($urutan, 0, 1));
 		$templateProcessor->setValue('no2', substr($urutan, 1, 1));
 		$templateProcessor->setValue('no3', substr($urutan, 2, 1));
