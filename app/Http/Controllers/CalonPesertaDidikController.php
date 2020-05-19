@@ -281,14 +281,15 @@ class CalonPesertaDidikController extends Controller
         $name = $file->getClientOriginalName();
 
         $destinationPath = base_path('/public/assets/berkas');
-        $upload = $file->move($destinationPath, $peserta_didik_id."-".$jenis_berkas_id."-".date('Y-m-d H:i:s').".".$ext);
-        // $upload = $file->move($destinationPath, $name);
+        $upload = $file->move($destinationPath, $peserta_didik_id."-".$jenis_berkas_id.".".$ext);
+        // $upload = $file->move($destinationPath, $peserta_didik_id."-".$jenis_berkas_id."-".$name);
 
         $msg = $upload ? 'sukses' : 'gagal';
 
         if($upload){
 
-			return response(['msg' => $msg, 'filename' => "/assets/berkas/".$peserta_didik_id."-".$jenis_berkas_id."-".date('Y-m-d H:i:s').".".$ext, 'jenis' => $jenis, 'jenis_berkas_id' => $jenis_berkas_id]);
+			// return response(['msg' => $msg, 'filename' => "/assets/berkas/".$peserta_didik_id."-".$jenis_berkas_id."-".$name, 'jenis' => $jenis, 'jenis_berkas_id' => $jenis_berkas_id]);
+			return response(['msg' => $msg, 'filename' => "/assets/berkas/".$peserta_didik_id."-".$jenis_berkas_id.".".$ext, 'jenis' => $jenis, 'jenis_berkas_id' => $jenis_berkas_id]);
 			// return response(['msg' => $msg, 'filename' => "/assets/berkas/".$name, 'jenis' => $jenis, 'jenis_berkas_id' => $jenis_berkas_id]);
 
             // $execute = DB::connection('sqlsrv_2')->table('pengguna')->where('pengguna_id','=',$pengguna_id)->update([
@@ -1167,5 +1168,32 @@ class CalonPesertaDidikController extends Controller
         header('Content-Type: application/vnd.openxmlformats-officedocument.wordprocessingml.document');
         header('Content-Disposition: attachment;filename="Bukti_PPDB_'.date("Y").'-'.$calon_pd->nik.'.docx"');
         $templateProcessor->saveAs('php://output');
-}
+	}
+
+	static function validasiBerkas(Request $request){
+		$calon_peserta_didik_id = $request->input('calon_peserta_didik_id') ? $request->input('calon_peserta_didik_id') : null;
+
+		if($calon_peserta_didik_id){
+			$fetch = DB::connection('sqlsrv_2')->select(DB::raw("SELECT
+				berkas.nama_file,
+				pilihan.calon_peserta_didik_id,
+				jalur_berkas.* 
+			FROM
+				REF.jalur_berkas jalur_berkas
+				JOIN ppdb.pilihan_sekolah pilihan ON pilihan.jalur_id = jalur_berkas.jalur_id 
+				AND pilihan.calon_peserta_didik_id = '".$calon_peserta_didik_id."' 
+				AND pilihan.soft_delete = 0 
+				AND pilihan.urut_pilihan = 1
+				LEFT JOIN ppdb.berkas_calon berkas ON berkas.calon_peserta_didik_id = pilihan.calon_peserta_didik_id 
+				AND berkas.soft_delete = 0 
+				AND berkas.jenis_berkas_id = jalur_berkas.jenis_berkas_id 
+			WHERE
+				expired_date IS NULL"));
+
+			return response([ 'rows' => $fetch, 'count' => sizeof($fetch) ], 200);			
+
+		}else{
+			return response([ 'rows' => array(), 'count' => 0 ], 201);
+		}
+	}
 }

@@ -24,7 +24,9 @@ class JadwalKegiatanController extends Controller
 		    ->leftJoin('ref.jalur AS jalur', 'jadwal_kegiatan.jalur_id', '=', 'jalur.jalur_id')
 		    ->leftJoin('ref.mst_wilayah AS wilayah', 'jadwal_kegiatan.kode_wilayah', '=', 'wilayah.kode_wilayah');
             
-        $countAll = $jadwal->count();
+		$countAll = $jadwal->count();
+		
+		// return $jadwal->toSql();die;
 
 	    $jadwal_limit = $jadwal->limit($limit)
 	    	->offset($offset)

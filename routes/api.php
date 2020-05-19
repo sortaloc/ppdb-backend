@@ -110,6 +110,7 @@ Route::prefix('CalonPesertaDidik')->group(function(){
 	Route::get('getKonfirmasiPendaftaran', 'CalonPesertaDidikController@getKonfirmasiPendaftaran'); // params: { 'kolom2_calon_pd' }
 	Route::get('cekNik', 'CalonPesertaDidikController@cekNik'); // params: { 'kolom2_calon_pd' }
 	Route::get('cekNISN', 'CalonPesertaDidikController@cekNISN'); // params: { 'kolom2_calon_pd' }
+	Route::get('validasiBerkas', 'CalonPesertaDidikController@validasiBerkas'); // params: { 'kolom2_calon_pd' }
 });
 
 Route::prefix('BerkasCalon')->group(function(){
