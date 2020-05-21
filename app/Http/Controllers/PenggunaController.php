@@ -188,6 +188,7 @@ class PenggunaController extends Controller
     public function authenticate(Request $request) { 
         $username = $request->input('username');
         $password = $request->input('password');
+        $peran_id = $request->input('peran_id') ? $request->input('peran_id') : null;
         $passCode = md5($password);
 
         $user = DB::connection('sqlsrv_2')->table(DB::raw('pengguna'))->where('username', '=', DB::raw("'".$username."'"))->where('soft_delete', '=', 0)->first();
@@ -197,6 +198,15 @@ class PenggunaController extends Controller
                 try { 
                     // verify the credentials and create a token for the user
                     // if ( !$token = JWTAuth::encode($payload) ) {
+                    if($peran_id){
+
+                        if($user->peran_id != $peran_id){
+                            //bukan perannya
+                            return response()->json(['error' => 'Anda tidak punya hak untuk mengakses aplikasi ini. Silakan login menggunakan aplikasi untuk orang tua siswa atau sekolah!'], 200);
+                        }
+
+                    }
+
                     
                     $factory = JWTFactory::customClaims([
                         'sub'   => env('API_ID'),

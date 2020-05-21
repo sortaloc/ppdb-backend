@@ -11,6 +11,61 @@ use DB;
 
 class CalonPesertaDidikController extends Controller
 {
+	public function getRekapTotal(Request $request){
+		$sql = "SELECT 
+					SUM ( 1 ) AS total,
+					SUM ( calons.konfirmasi ) AS konfirmasi,
+					SUM ( CASE WHEN calons.persen_valid < 100 THEN 0 ELSE 1 END ) AS berkas_valid,
+					0 AS diterima 
+				FROM
+					ppdb.calon_peserta_didik
+				JOIN (
+					SELECT
+						( CASE WHEN konfirmasi.calon_peserta_didik_id IS NOT NULL THEN 1 ELSE 0 END ) AS konfirmasi,
+						validasi_berkas.jalur_id,
+						validasi_berkas.persen_valid,
+						calon_peserta_didik.calon_peserta_didik_id 
+					FROM
+						ppdb.calon_peserta_didik
+						LEFT JOIN (
+						SELECT
+							pilihan.calon_peserta_didik_id,
+							pilihan.jalur_id,
+							SUM ( CASE WHEN jalur_berkas.wajib = 1 THEN 1 ELSE 0 END ) AS total,
+							SUM ( CASE WHEN jalur_berkas.wajib = 1 AND berkas.nama_file IS NOT NULL THEN 1 ELSE 0 END ) AS total_valid,
+							ROUND(
+								CAST (
+									(
+									SUM ( CASE WHEN jalur_berkas.wajib = 1 AND berkas.nama_file IS NOT NULL THEN 1 ELSE 0 END ) / CAST ( SUM ( CASE WHEN jalur_berkas.wajib = 1 THEN 1 ELSE 0 END ) AS FLOAT ) * 100 
+								) AS NUMERIC 
+							),
+							2 
+						) AS persen_valid 
+					FROM
+						REF.jalur_berkas jalur_berkas
+						JOIN ppdb.pilihan_sekolah pilihan ON pilihan.jalur_id = jalur_berkas.jalur_id 
+						AND pilihan.soft_delete = 0 
+						AND pilihan.urut_pilihan = 1
+						LEFT JOIN ppdb.berkas_calon berkas ON berkas.calon_peserta_didik_id = pilihan.calon_peserta_didik_id 
+						AND berkas.soft_delete = 0 
+						AND berkas.jenis_berkas_id = jalur_berkas.jenis_berkas_id 
+					WHERE
+						expired_date IS NULL 
+					GROUP BY
+						pilihan.calon_peserta_didik_id,
+						pilihan.jalur_id 
+					) validasi_berkas ON validasi_berkas.calon_peserta_didik_id = calon_peserta_didik.calon_peserta_didik_id
+					LEFT JOIN ( SELECT DISTINCT ( calon_peserta_didik_id ) AS calon_peserta_didik_id FROM ppdb.konfirmasi_pendaftaran WHERE soft_delete = 0 AND status = 1 ) konfirmasi ON konfirmasi.calon_peserta_didik_id = calon_peserta_didik.calon_peserta_didik_id 
+				WHERE
+					calon_peserta_didik.soft_delete = 0 
+				) calons ON calons.calon_peserta_didik_id = calon_peserta_didik.calon_peserta_didik_id
+				WHERE calon_peserta_didik.Soft_delete = 0";
+
+		$fetch = DB::connection('sqlsrv_2')->select(DB::raw($sql));
+
+		return $fetch;
+	}
+
 	public function batalkanKonfirmasi(Request $request)
 	{
 		$calon_peserta_didik_id = $request->input('calon_peserta_didik_id') ? $request->input('calon_peserta_didik_id') : null;
