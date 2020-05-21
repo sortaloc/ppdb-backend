@@ -11,6 +11,39 @@ use DB;
 
 class CalonPesertaDidikController extends Controller
 {
+	public function batalkanKonfirmasi(Request $request)
+	{
+		$calon_peserta_didik_id = $request->input('calon_peserta_didik_id') ? $request->input('calon_peserta_didik_id') : null;
+
+		if($calon_peserta_didik_id){
+
+			$exe = DB::connection('sqlsrv_2')
+			->table('ppdb.konfirmasi_pendaftaran')
+			->where('calon_peserta_didik_id','=',$calon_peserta_didik_id)
+			->update([
+				'status' => 0,
+				'last_update' => DB::raw('now()::timestamp(0)')
+			]);
+
+			return response(
+				[
+					'rows' => DB::connection('sqlsrv_2')->table('ppdb.konfirmasi_pendaftaran')->where('calon_peserta_didik_id','=',$calon_peserta_didik_id)->get(),
+					'success' => ($exe ? true : false)
+				],
+				200
+			);
+
+		}else{
+			return response(
+				[
+					'rows' => [],
+					'success' => false
+				],
+				201
+			);
+		}
+	}
+	
 	public function index(Request $request)
 	{
 		$limit = $request->limit ? $request->limit : 20;
@@ -36,7 +69,8 @@ class CalonPesertaDidikController extends Controller
 				'prov.nama as provinsi',
 				'pengguna.nama as nama_pengguna'
 			)
-			->orderBy('ppdb.calon_peserta_didik.create_date', 'DESC');
+			->orderBy('ppdb.calon_peserta_didik.nama', 'ASC');
+			// ->orderBy('ppdb.calon_peserta_didik.create_date', 'DESC');
 			
 		if($calon_peserta_didik_id){
 			$count->where('ppdb.calon_peserta_didik.calon_peserta_didik_id','=',$calon_peserta_didik_id);
