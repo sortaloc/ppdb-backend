@@ -152,111 +152,236 @@ class SekolahController extends Controller
         $searchText = $request->searchText ? $request->searchText : '';
         $sekolah_id = $request->sekolah_id;
 
-        // $calon_pd = DB::connection('sqlsrv_2')
-        //     ->table('ppdb.pilihan_sekolah AS pilihan_sekolah')
-        //     ->select(
-        //         'pilihan_sekolah.*',
-        //         'sekolah.npsn',
-        //         'sekolah.nama AS nama_sekolah',
-        //         'calon_pd.nik',
-        //         'calon_pd.nama AS nama_calon_pd',
-        //         'calon_pd.jenis_kelamin AS jenis_kelamin',
-        //         'calon_pd.tempat_lahir AS tempat_lahir',
-        //         'calon_pd.tanggal_lahir AS tanggal_lahir',
-        //         'calon_pd.asal_sekolah_id AS asal_sekolah_id',
-        //         'calon_pd.alamat_tempat_tinggal AS alamat_tempat_tinggal',
-        //         'sekolah_asal.npsn AS npsn_sekolah_asal',
-        //         'sekolah_asal.nama AS nama_sekolah_asal',
-        //         'jalur.nama AS nama_jalur'
-        //     )
-        //     ->leftJoin('ppdb.sekolah AS sekolah', 'pilihan_sekolah.sekolah_id', '=', 'sekolah.sekolah_id')
-        //     ->leftJoin('ppdb.calon_peserta_didik AS calon_pd', 'pilihan_sekolah.calon_peserta_didik_id', '=', 'calon_pd.calon_peserta_didik_id')
-        //     ->leftJoin('ref.jalur AS jalur', 'pilihan_sekolah.jalur_id', '=', 'jalur.jalur_id')
-        //     ->leftJoin('ppdb.sekolah AS sekolah_asal', 'calon_pd.asal_sekolah_id', '=', 'sekolah_asal.sekolah_id')
-        //     ->where('pilihan_sekolah.soft_delete', 0)
-        //     ->where('pilihan_sekolah.sekolah_id', $sekolah_id)
-        //     ->orderBy('pilihan_sekolah.create_date', 'ASC')
-        //     ->limit($limit)
-        //     ->offset($offset);
+        // // $calon_pd = DB::connection('sqlsrv_2')
+        // //     ->table('ppdb.pilihan_sekolah AS pilihan_sekolah')
+        // //     ->select(
+        // //         'pilihan_sekolah.*',
+        // //         'sekolah.npsn',
+        // //         'sekolah.nama AS nama_sekolah',
+        // //         'calon_pd.nik',
+        // //         'calon_pd.nama AS nama_calon_pd',
+        // //         'calon_pd.jenis_kelamin AS jenis_kelamin',
+        // //         'calon_pd.tempat_lahir AS tempat_lahir',
+        // //         'calon_pd.tanggal_lahir AS tanggal_lahir',
+        // //         'calon_pd.asal_sekolah_id AS asal_sekolah_id',
+        // //         'calon_pd.alamat_tempat_tinggal AS alamat_tempat_tinggal',
+        // //         'sekolah_asal.npsn AS npsn_sekolah_asal',
+        // //         'sekolah_asal.nama AS nama_sekolah_asal',
+        // //         'jalur.nama AS nama_jalur'
+        // //     )
+        // //     ->leftJoin('ppdb.sekolah AS sekolah', 'pilihan_sekolah.sekolah_id', '=', 'sekolah.sekolah_id')
+        // //     ->leftJoin('ppdb.calon_peserta_didik AS calon_pd', 'pilihan_sekolah.calon_peserta_didik_id', '=', 'calon_pd.calon_peserta_didik_id')
+        // //     ->leftJoin('ref.jalur AS jalur', 'pilihan_sekolah.jalur_id', '=', 'jalur.jalur_id')
+        // //     ->leftJoin('ppdb.sekolah AS sekolah_asal', 'calon_pd.asal_sekolah_id', '=', 'sekolah_asal.sekolah_id')
+        // //     ->where('pilihan_sekolah.soft_delete', 0)
+        // //     ->where('pilihan_sekolah.sekolah_id', $sekolah_id)
+        // //     ->orderBy('pilihan_sekolah.create_date', 'ASC')
+        // //     ->limit($limit)
+        // //     ->offset($offset);
 
-        // if($searchText){
-        //     $calon_pd = $calon_pd->where('calon_pd.nik', 'ilike', '%'.$searchText.'%')->orWhere('calon_pd.nama', 'ilike', '%'.$searchText.'%');
-        // }
+        // // if($searchText){
+        // //     $calon_pd = $calon_pd->where('calon_pd.nik', 'ilike', '%'.$searchText.'%')->orWhere('calon_pd.nama', 'ilike', '%'.$searchText.'%');
+        // // }
 
-        // $calon_pd = $calon_pd->get();
-        $calon_pd = DB::connection('sqlsrv_2')->table('ppdb.pilihan_sekolah')
-        ->leftJoin('ppdb.konfirmasi_pendaftaran as konf','konf.calon_peserta_didik_id','=','pilihan_sekolah.calon_peserta_didik_id')
-        ->join('ppdb.calon_peserta_didik','calon_peserta_didik.calon_peserta_didik_id','=','pilihan_sekolah.calon_peserta_didik_id')
-        ->join('ref.jalur as jalur','jalur.jalur_id','=','pilihan_sekolah.jalur_id')
-        ->where('pilihan_sekolah.soft_delete','=',0)
-        ->where('calon_peserta_didik.soft_delete','=',0)
-        ->where('ppdb.pilihan_sekolah.sekolah_id','=',$sekolah_id)
-        ->where('urut_pilihan','=',$nomor_pilihan)
-        ->orderBy('pilihan_sekolah.sekolah_id')
-        ->orderBy('pilihan_sekolah.jalur_id')
-        ->select(
-            DB::raw("ROW_NUMBER
-            () OVER (
-                PARTITION BY pilihan_sekolah.sekolah_id, pilihan_sekolah.jalur_id
-            ORDER BY
-                pilihan_sekolah.urut_pilihan ASC,
-                COALESCE ( konf.status, 0 ) DESC,
-                konf.last_update ASC,	
-                pilihan_sekolah.create_date ASC
-            ) AS urutan"),
-            'urut_pilihan',
-            DB::raw("COALESCE ( konf.status, 0 ) AS konfirmasi"),
-            'konf.last_update',
-            'pilihan_sekolah.create_date',
-            'pilihan_sekolah.jalur_id',
-            'calon_peserta_didik.nama',
-            'pilihan_sekolah.sekolah_id',
-            'pilihan_sekolah.calon_peserta_didik_id',
-            'ppdb.calon_peserta_didik.tanggal_lahir',
-            'ppdb.calon_peserta_didik.nama as nama_calon_pd',
-            'ppdb.calon_peserta_didik.nik',
-            'ppdb.calon_peserta_didik.tempat_lahir',
-            'ppdb.calon_peserta_didik.jenis_kelamin',
-            'jalur.nama as jalur',
-            'ppdb.calon_peserta_didik.lintang',
-            'ppdb.calon_peserta_didik.bujur'
-        );
-        // $calon_pd = DB::connection('sqlsrv_2')->select(DB::raw("SELECT 
-        //     ROW_NUMBER
+        // // $calon_pd = $calon_pd->get();
+        
+        
+        // $calon_pd = DB::connection('sqlsrv_2')->table('ppdb.pilihan_sekolah')
+        // ->leftJoin('ppdb.konfirmasi_pendaftaran as konf','konf.calon_peserta_didik_id','=','pilihan_sekolah.calon_peserta_didik_id')
+        // ->join('ppdb.calon_peserta_didik','calon_peserta_didik.calon_peserta_didik_id','=','pilihan_sekolah.calon_peserta_didik_id')
+        // ->join('ref.jalur as jalur','jalur.jalur_id','=','pilihan_sekolah.jalur_id')
+        // ->where('pilihan_sekolah.soft_delete','=',0)
+        // ->where('calon_peserta_didik.soft_delete','=',0)
+        // ->where('ppdb.pilihan_sekolah.sekolah_id','=',$sekolah_id)
+        // ->where('urut_pilihan','=',$nomor_pilihan)
+        // ->orderBy('pilihan_sekolah.sekolah_id')
+        // ->orderBy('pilihan_sekolah.jalur_id')
+        // ->select(
+        //     DB::raw("ROW_NUMBER
         //     () OVER (
         //         PARTITION BY pilihan_sekolah.sekolah_id, pilihan_sekolah.jalur_id
         //     ORDER BY
-        //         COALESCE ( konf.status, 0 ) DESC,
         //         pilihan_sekolah.urut_pilihan ASC,
+        //         COALESCE ( konf.status, 0 ) DESC,
         //         konf.last_update ASC,	
         //         pilihan_sekolah.create_date ASC
-        //     ) AS urutan,
-        //     urut_pilihan,
-        //     COALESCE ( konf.status, 0 ) AS konfirmasi,
-        //     konf.last_update,
-        //     pilihan_sekolah.create_date,
-        //     pilihan_sekolah.jalur_id,
-        //     calon_peserta_didik.nama,
-        //     pilihan_sekolah.sekolah_id,
-        //     pilihan_sekolah.calon_peserta_didik_id
-        // FROM
-        //     ppdb.pilihan_sekolah
-        //     LEFT JOIN ppdb.konfirmasi_pendaftaran konf ON konf.calon_peserta_didik_id = pilihan_sekolah.calon_peserta_didik_id
-        //     JOIN ppdb.calon_peserta_didik ON calon_peserta_didik.calon_peserta_didik_id = pilihan_sekolah.calon_peserta_didik_id 
-        // WHERE
-        //     pilihan_sekolah.soft_delete = 0 
-        //     AND calon_peserta_didik.soft_delete = 0 
-        //     AND ppdb.pilihan_sekolah.sekolah_id = '".$sekolah_id."'
-        // ORDER BY
-        //     pilihan_sekolah.sekolah_id,
-        //     pilihan_sekolah.jalur_id"));
+        //     ) AS urutan"),
+        //     'urut_pilihan',
+        //     DB::raw("COALESCE ( konf.status, 0 ) AS konfirmasi"),
+        //     'konf.last_update',
+        //     'pilihan_sekolah.create_date',
+        //     'pilihan_sekolah.jalur_id',
+        //     'calon_peserta_didik.nama',
+        //     'pilihan_sekolah.sekolah_id',
+        //     'pilihan_sekolah.calon_peserta_didik_id',
+        //     'ppdb.calon_peserta_didik.tanggal_lahir',
+        //     'ppdb.calon_peserta_didik.nama as nama_calon_pd',
+        //     'ppdb.calon_peserta_didik.nik',
+        //     'ppdb.calon_peserta_didik.tempat_lahir',
+        //     'ppdb.calon_peserta_didik.jenis_kelamin',
+        //     'jalur.nama as jalur',
+        //     'ppdb.calon_peserta_didik.lintang',
+        //     'ppdb.calon_peserta_didik.bujur'
+        // );
 
-        // if($searchText){
-        //     $calon_pd->where('ppdb.calon_peserta_didik.nama','ilike','%'.$searchText.'%');
+
+        // // $calon_pd = DB::connection('sqlsrv_2')->select(DB::raw("SELECT 
+        // //     ROW_NUMBER
+        // //     () OVER (
+        // //         PARTITION BY pilihan_sekolah.sekolah_id, pilihan_sekolah.jalur_id
+        // //     ORDER BY
+        // //         COALESCE ( konf.status, 0 ) DESC,
+        // //         pilihan_sekolah.urut_pilihan ASC,
+        // //         konf.last_update ASC,	
+        // //         pilihan_sekolah.create_date ASC
+        // //     ) AS urutan,
+        // //     urut_pilihan,
+        // //     COALESCE ( konf.status, 0 ) AS konfirmasi,
+        // //     konf.last_update,
+        // //     pilihan_sekolah.create_date,
+        // //     pilihan_sekolah.jalur_id,
+        // //     calon_peserta_didik.nama,
+        // //     pilihan_sekolah.sekolah_id,
+        // //     pilihan_sekolah.calon_peserta_didik_id
+        // // FROM
+        // //     ppdb.pilihan_sekolah
+        // //     LEFT JOIN ppdb.konfirmasi_pendaftaran konf ON konf.calon_peserta_didik_id = pilihan_sekolah.calon_peserta_didik_id
+        // //     JOIN ppdb.calon_peserta_didik ON calon_peserta_didik.calon_peserta_didik_id = pilihan_sekolah.calon_peserta_didik_id 
+        // // WHERE
+        // //     pilihan_sekolah.soft_delete = 0 
+        // //     AND calon_peserta_didik.soft_delete = 0 
+        // //     AND ppdb.pilihan_sekolah.sekolah_id = '".$sekolah_id."'
+        // // ORDER BY
+        // //     pilihan_sekolah.sekolah_id,
+        // //     pilihan_sekolah.jalur_id"));
+
+        // // if($searchText){
+        // //     $calon_pd->where('ppdb.calon_peserta_didik.nama','ilike','%'.$searchText.'%');
+        // // }
+
+        // return $calon_pd->toSql();die;  
+
+        if($searchText){
+            $param_keyword = " AND (calon.nama ILIKE'%".$searchText."%' OR calon.nik ILIKE'%".$searchText."%' OR calon.nisn ILIKE'%".$searchText."%')";
+        }else{
+            $param_keyword = "";
+        }
+
+        $calon_pd_count = DB::connection('sqlsrv_2')->select(DB::raw("SELECT
+                        sum(1) as total 
+                    FROM
+                        ppdb.calon_peserta_didik calon
+                        JOIN (
+                        SELECT ROW_NUMBER
+                            () OVER (
+                                PARTITION BY pilihan_sekolah.sekolah_id,
+                                pilihan_sekolah.jalur_id 
+                            ORDER BY
+                                pilihan_sekolah.urut_pilihan ASC,
+                                COALESCE ( konf.status, 0 ) DESC,
+                                konf.last_update ASC,
+                                pilihan_sekolah.create_date ASC 
+                            ) AS urutan,
+                            urut_pilihan,
+                            COALESCE ( konf.status, 0 ) AS konfirmasi,
+                            konf.last_update,
+                            pilihan_sekolah.create_date,
+                            pilihan_sekolah.jalur_id,
+                            calon_peserta_didik.nama,
+                            pilihan_sekolah.sekolah_id,
+                            pilihan_sekolah.calon_peserta_didik_id,
+                            ppdb.calon_peserta_didik.tanggal_lahir,
+                            ppdb.calon_peserta_didik.nama AS nama_calon_pd,
+                            ppdb.calon_peserta_didik.nik,
+                            ppdb.calon_peserta_didik.tempat_lahir,
+                            ppdb.calon_peserta_didik.jenis_kelamin,
+                            jalur.nama AS jalur,
+                            ppdb.calon_peserta_didik.lintang,
+                            ppdb.calon_peserta_didik.bujur 
+                        FROM
+                            ppdb.pilihan_sekolah
+                            LEFT JOIN ppdb.konfirmasi_pendaftaran AS konf ON konf.calon_peserta_didik_id = pilihan_sekolah.calon_peserta_didik_id
+                            INNER JOIN ppdb.calon_peserta_didik ON calon_peserta_didik.calon_peserta_didik_id = pilihan_sekolah.calon_peserta_didik_id
+                            INNER JOIN ref.jalur AS jalur ON jalur.jalur_id = pilihan_sekolah.jalur_id 
+                        WHERE
+                            pilihan_sekolah.soft_delete = 0 
+                            AND calon_peserta_didik.soft_delete = 0 
+                            AND ppdb.pilihan_sekolah.sekolah_id = '".$sekolah_id."' 
+                            AND urut_pilihan = 1 
+                        ORDER BY
+                            pilihan_sekolah.sekolah_id ASC,
+                            pilihan_sekolah.jalur_id ASC 
+                        ) calon_urutan ON calon_urutan.calon_peserta_didik_id = calon.calon_peserta_didik_id 
+                    WHERE
+                        calon.soft_delete = 0 
+                        ".$param_keyword));
+
+        $calon_pd = DB::connection('sqlsrv_2')->select(DB::raw("SELECT
+                        calon_urutan.* 
+                    FROM
+                        ppdb.calon_peserta_didik calon
+                        JOIN (
+                        SELECT ROW_NUMBER
+                            () OVER (
+                                PARTITION BY pilihan_sekolah.sekolah_id,
+                                pilihan_sekolah.jalur_id 
+                            ORDER BY
+                                pilihan_sekolah.urut_pilihan ASC,
+                                COALESCE ( konf.status, 0 ) DESC,
+                                konf.last_update ASC,
+                                pilihan_sekolah.create_date ASC 
+                            ) AS urutan,
+                            urut_pilihan,
+                            COALESCE ( konf.status, 0 ) AS konfirmasi,
+                            konf.last_update,
+                            pilihan_sekolah.create_date,
+                            pilihan_sekolah.jalur_id,
+                            calon_peserta_didik.nama,
+                            pilihan_sekolah.sekolah_id,
+                            pilihan_sekolah.calon_peserta_didik_id,
+                            ppdb.calon_peserta_didik.tanggal_lahir,
+                            ppdb.calon_peserta_didik.nama AS nama_calon_pd,
+                            ppdb.calon_peserta_didik.nik,
+                            ppdb.calon_peserta_didik.tempat_lahir,
+                            ppdb.calon_peserta_didik.jenis_kelamin,
+                            jalur.nama AS jalur,
+                            ppdb.calon_peserta_didik.lintang,
+                            ppdb.calon_peserta_didik.bujur 
+                        FROM
+                            ppdb.pilihan_sekolah
+                            LEFT JOIN ppdb.konfirmasi_pendaftaran AS konf ON konf.calon_peserta_didik_id = pilihan_sekolah.calon_peserta_didik_id
+                            INNER JOIN ppdb.calon_peserta_didik ON calon_peserta_didik.calon_peserta_didik_id = pilihan_sekolah.calon_peserta_didik_id
+                            INNER JOIN ref.jalur AS jalur ON jalur.jalur_id = pilihan_sekolah.jalur_id 
+                        WHERE
+                            pilihan_sekolah.soft_delete = 0 
+                            AND calon_peserta_didik.soft_delete = 0 
+                            AND ppdb.pilihan_sekolah.sekolah_id = '".$sekolah_id."' 
+                            AND urut_pilihan = 1 
+                        ORDER BY
+                            pilihan_sekolah.sekolah_id ASC,
+                            pilihan_sekolah.jalur_id ASC 
+                        ) calon_urutan ON calon_urutan.calon_peserta_didik_id = calon.calon_peserta_didik_id 
+                    WHERE
+                        calon.soft_delete = 0 
+                        ".$param_keyword.
+                    "ORDER BY 
+                        calon_urutan.sekolah_id ASC, 
+                        calon_urutan.jalur_id ASC, 
+                        calon_urutan.urutan ASC
+                    OFFSET ".$start." LIMIT ".$limit));
+        
+        if(sizeof($calon_pd_count) > 0){
+            $calon_pd_total = $calon_pd_count[0]->total;
+        }else{
+            $calon_pd_total = 0;
+        }
+
+        // if(sizeof($calon_pd) > 0){
+        //     $calon_pd = $calon_pd->skip($start)->take($limit)->get();
+        // }else{
+        //     $calon_pd = $calon_pd->skip($start)->take($limit)->get();
         // }
 
-        $calon_pd_total = $calon_pd->count();
-        $calon_pd = $calon_pd->skip($start)->take($limit)->get();
 
         $i = 0;
         foreach ($calon_pd as $key) {
