@@ -11,6 +11,7 @@ use DB;
 
 class CalonPesertaDidikController extends Controller
 {
+
 	public function getRekapTotal(Request $request){
 		$sql = "SELECT 
 					SUM ( 1 ) AS total,
@@ -98,6 +99,162 @@ class CalonPesertaDidikController extends Controller
 			);
 		}
 	}
+
+	public function getCalonPesertaDidikSekolah(Request $request){
+		$limit = $request->limit ? $request->limit : 20;
+	    $start = $request->start ? $request->start : 0;
+		$sekolah_id = $request->sekolah_id ? $request->sekolah_id : null;
+		$urut_pilihan = $request->urut_pilihan ? $request->urut_pilihan : null;
+		$searchText = $request->searchText ? $request->searchText : null;
+		$urut = $request->urut ? $request->urut : null;
+		$jalur_id = $request->jalur_id ? $request->jalur_id : null;
+		
+		if($searchText){
+			$param_keyword = " AND (calon.nama ilike '%".$searchText."%' OR calon.nisn ilike '%".$searchText."%' OR calon.nik ilike '%".$searchText."%')";
+		}else{
+			$param_keyword = "";
+		}
+
+		if($urut_pilihan){
+			$param_urut = " AND pilihan.urut_pilihan = '".$urut_pilihan."'";
+		}else{
+			$param_urut = "";
+		}
+		
+		if($jalur_id){
+			$param_jalur = " AND pilihan.jalur_id = '".$jalur_id."'";
+		}else{
+			$param_jalur = "";
+		}
+
+		if($urut == 'jarak'){
+			$query_urut = " pilihan.jalur_id,
+							ppdb.calculate_distance(cast(calon.lintang as float), cast(calon.bujur as float), cast(sekolah.lintang as float), cast(sekolah.bujur as float), cast('K' as varchar(1))) ASC,
+							pilihan.urut_pilihan ASC,
+							urutan.urutan ASC
+						";
+		}else{
+			$query_urut = "
+							pilihan.jalur_id,
+							pilihan.urut_pilihan ASC,
+							urutan.urutan ASC,
+							ppdb.calculate_distance(cast(calon.lintang as float), cast(calon.bujur as float), cast(sekolah.lintang as float), cast(sekolah.bujur as float), cast('K' as varchar(1))) ASC
+						";
+		}
+
+		$query_body = "FROM
+						ppdb.pilihan_sekolah pilihan
+						JOIN ppdb.calon_peserta_didik calon ON calon.calon_peserta_didik_id = pilihan.calon_peserta_didik_id
+						JOIN REF.jalur jalur ON jalur.jalur_id = pilihan.jalur_id 
+						JOIN ppdb.sekolah sekolah on sekolah.sekolah_id =  pilihan.sekolah_id
+						LEFT JOIN (
+							SELECT ROW_NUMBER
+							() OVER (
+								PARTITION BY pilihan_sekolah.sekolah_id, pilihan_sekolah.jalur_id
+							ORDER BY
+								pilihan_sekolah.urut_pilihan ASC,
+								COALESCE ( konf.status, 0 ) DESC,
+								konf.last_update ASC,	
+								pilihan_sekolah.create_date ASC
+							) AS urutan,
+							urut_pilihan,
+							COALESCE ( konf.status, 0 ) AS konfirmasi,
+							konf.last_update,
+							pilihan_sekolah.create_date,
+							pilihan_sekolah.jalur_id,
+							calon_peserta_didik.nama,
+							pilihan_sekolah.sekolah_id,
+							pilihan_sekolah.calon_peserta_didik_id
+						FROM
+							ppdb.pilihan_sekolah
+							LEFT JOIN ppdb.konfirmasi_pendaftaran konf ON konf.calon_peserta_didik_id = pilihan_sekolah.calon_peserta_didik_id
+							JOIN ppdb.calon_peserta_didik ON calon_peserta_didik.calon_peserta_didik_id = pilihan_sekolah.calon_peserta_didik_id 
+						WHERE
+							pilihan_sekolah.soft_delete = 0 
+							AND calon_peserta_didik.soft_delete = 0 
+						ORDER BY
+							pilihan_sekolah.sekolah_id,
+							pilihan_sekolah.jalur_id
+						) as urutan on urutan.sekolah_id = pilihan.sekolah_id
+						AND urutan.calon_peserta_didik_id = pilihan.calon_peserta_didik_id
+					WHERE
+						pilihan.soft_delete = 0 
+						AND calon.soft_delete= 0
+						AND pilihan.sekolah_id = '{$sekolah_id}' 
+						{$param_keyword}
+						{$param_urut}
+						{$param_jalur}"; 
+
+		$fetch = DB::connection('sqlsrv_2')->select(DB::raw("SELECT
+			jalur.nama as jalur,
+			calon.*,
+			pilihan.jalur_id,
+			pilihan.urut_pilihan,
+			urutan.*,
+			sekolah.lintang as lintang_sekolah, 
+			sekolah.bujur as bujur_sekolah,
+			ppdb.calculate_distance(cast(calon.lintang as float), cast(calon.bujur as float), cast(sekolah.lintang as float), cast(sekolah.bujur as float), cast('K' as varchar(1))) as jarak 
+		{$query_body}
+		ORDER BY
+		{$query_urut}
+		LIMIT {$limit} OFFSET {$start}"));
+
+		for ($i=0; $i < sizeof($fetch); $i++) { 
+			//pas foto
+			$fetch_foto = DB::connection('sqlsrv_2')
+			->table('ppdb.berkas_calon')
+			->where('calon_peserta_didik_id','=',$fetch[$i]->calon_peserta_didik_id)
+			->where('soft_delete','=',0)
+			->where('jenis_berkas_id','=',8)
+			->get();
+
+			if(sizeof($fetch_foto) > 0){
+				$fetch[$i]->pas_foto = $fetch_foto[0]->nama_file;
+			}else{
+				$fetch[$i]->pas_foto = '/assets/img/generic-avatar.png';
+			}
+
+			//sekolah_asal
+			$fetch_sekolah_asal = DB::connection('sqlsrv_2')
+			->table('ppdb.sekolah')
+			->where('sekolah_id','=',$fetch[$i]->asal_sekolah_id)
+			->where('soft_delete','=',0)
+			->get();
+
+			if(sizeof($fetch_sekolah_asal) > 0){
+				$fetch[$i]->sekolah_asal = $fetch_sekolah_asal[0];
+				// $fetch[$i]->tingkat_pendidikan_id = $fetch_sekolah_asal[0];
+			}else{
+				$fetch[$i]->sekolah_asal = [];
+			}
+
+			//konfirmasi
+			$fetch_konfirmasi = DB::connection('sqlsrv_2')
+			->table('ppdb.konfirmasi_pendaftaran')
+			->where('calon_peserta_didik_id','=',$fetch[$i]->calon_peserta_didik_id)
+			->where('soft_delete','=',0)
+			->get();
+
+			if(sizeof($fetch_konfirmasi) > 0){
+				$fetch[$i]->status_konfirmasi = $fetch_konfirmasi[0]->status;
+				$fetch[$i]->tanggal_konfirmasi = $fetch_konfirmasi[0]->last_update;
+			}else{
+				$fetch[$i]->status_konfirmasi = 0;
+				$fetch[$i]->tanggal_konfirmasi = '-';
+			}
+
+			// $fetch[$i]->jarak = self::distance($fetch[$i]->lintang,$fetch[$i]->bujur,$fetch[$i]->lintang_sekolah,$fetch[$i]->bujur_sekolah);
+		}
+
+		return response(
+			[
+				'rows' => $fetch,
+				'count' => sizeof($fetch),
+				'countAll' => DB::connection('sqlsrv_2')->select(DB::raw("SELECT sum(1) as total {$query_body}"))[0]->total
+			],
+			200
+		);
+	}
 	
 	public function index(Request $request)
 	{
@@ -106,6 +263,8 @@ class CalonPesertaDidikController extends Controller
 	    $calon_peserta_didik_id = $request->calon_peserta_didik_id ? ($request->calon_peserta_didik_id != 'null' ? $request->calon_peserta_didik_id : null) : null;
 	    $searchText = $request->searchText ? $request->searchText : null;
 	    $pengguna_id = $request->pengguna_id ? $request->pengguna_id : null;
+	    $sekolah_id = $request->sekolah_id ? $request->sekolah_id : null;
+	    $urut_pilihan = $request->urut_pilihan ? $request->urut_pilihan : null;
 
 	    $count = CalonPD::where('ppdb.calon_peserta_didik.soft_delete', 0);
 		$calonPDs = CalonPD::where('ppdb.calon_peserta_didik.soft_delete', 0)
@@ -126,6 +285,14 @@ class CalonPesertaDidikController extends Controller
 			)
 			->orderBy('ppdb.calon_peserta_didik.nama', 'ASC');
 			// ->orderBy('ppdb.calon_peserta_didik.create_date', 'DESC');
+
+		if($sekolah_id){
+			$calonPDs->join('ppdb.pilihan_sekolah', function($join)
+			{
+				$join->on('ppdb.pilihan_sekolah.calon_peserta_didik_id','=', 'ppdb.calon_peserta_didik.calon_peserta_didik_id');
+				$join->on('peringkat.kuis_id','=', 'pengguna_kuis.kuis_id');
+			});
+		}
 			
 		if($calon_peserta_didik_id){
 			$count->where('ppdb.calon_peserta_didik.calon_peserta_didik_id','=',$calon_peserta_didik_id);
@@ -438,21 +605,43 @@ class CalonPesertaDidikController extends Controller
 			], 201);
 	}
 
-	function distance($lat1, $lon1, $lat2, $lon2) { 
-        $pi80 = M_PI / 180; 
-        $lat1 *= $pi80; 
-        $lon1 *= $pi80; 
-        $lat2 *= $pi80; 
-        $lon2 *= $pi80; 
-        $r = 6372.797; // mean radius of Earth in km 
-        $dlat = $lat2 - $lat1; 
-        $dlon = $lon2 - $lon1; 
-        $a = sin($dlat / 2) * sin($dlat / 2) + cos($lat1) * cos($lat2) * sin($dlon / 2) * sin($dlon / 2); 
-        $c = 2 * atan2(sqrt($a), sqrt(1 - $a)); 
-        $km = $r * $c; 
-        //echo ' '.$km; 
-        return $km; 
-    }
+	// function distance($lat1, $lon1, $lat2, $lon2) { 
+    //     $pi80 = M_PI / 180; 
+    //     $lat1 *= $pi80; 
+    //     $lon1 *= $pi80; 
+    //     $lat2 *= $pi80; 
+    //     $lon2 *= $pi80; 
+    //     $r = 6372.797; // mean radius of Earth in km 
+    //     $dlat = $lat2 - $lat1; 
+    //     $dlon = $lon2 - $lon1; 
+    //     $a = sin($dlat / 2) * sin($dlat / 2) + cos($lat1) * cos($lat2) * sin($dlon / 2) * sin($dlon / 2); 
+    //     $c = 2 * atan2(sqrt($a), sqrt(1 - $a)); 
+    //     $km = $r * $c; 
+    //     //echo ' '.$km; 
+    //     return $km; 
+	// }
+	
+	public function distance($lat1, $lon1, $lat2, $lon2, $unit = 'K') {
+		if (($lat1 == $lat2) && ($lon1 == $lon2)) {
+		  return 0;
+		}
+		else {
+		  $theta = $lon1 - $lon2;
+		  $dist = sin(deg2rad($lat1)) * sin(deg2rad($lat2)) +  cos(deg2rad($lat1)) * cos(deg2rad($lat2)) * cos(deg2rad($theta));
+		  $dist = acos($dist);
+		  $dist = rad2deg($dist);
+		  $miles = $dist * 60 * 1.1515;
+		  $unit = strtoupper($unit);
+	  
+		  if ($unit == "K") {
+			return ($miles * 1.609344);
+		  } else if ($unit == "N") {
+			return ($miles * 0.8684);
+		  } else {
+			return $miles;
+		  }
+		}
+	}
 
 	public function getSekolahPilihan(Request $request){
 		$calon_peserta_didik_id = $request->input('calon_peserta_didik_id') ? $request->input('calon_peserta_didik_id') : null;

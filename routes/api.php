@@ -113,6 +113,7 @@ Route::prefix('CalonPesertaDidik')->group(function(){
 	Route::get('validasiBerkas', 'CalonPesertaDidikController@validasiBerkas'); // params: { 'kolom2_calon_pd' }
 	Route::post('batalkanKonfirmasi', 'CalonPesertaDidikController@batalkanKonfirmasi'); // params: { 'kolom2_calon_pd' }
 	Route::get('getRekapTotal', 'CalonPesertaDidikController@getRekapTotal'); // params: { 'kolom2_calon_pd' }
+	Route::get('getCalonPesertaDidikSekolah', 'CalonPesertaDidikController@getCalonPesertaDidikSekolah'); // params: { 'kolom2_calon_pd' }
 });
 
 Route::prefix('BerkasCalon')->group(function(){

@@ -38,6 +38,9 @@ class SekolahController extends Controller
         $lintang = $request->lintang ? $request->lintang : 0;
         $bujur = $request->bujur ? $request->bujur : 0;
         $nomor_pilihan = $request->nomor_pilihan ? $request->nomor_pilihan : null;
+        $npsn = $request->npsn ? $request->npsn : null;
+        $tampil_koreg = $request->tampil_koreg ? $request->tampil_koreg : null;
+        $koreg = $request->koreg ? $request->koreg : null;
 
         $count = DB::connection('sqlsrv_2')->table('ppdb.sekolah AS sekolah')->where('sekolah.soft_delete', 0)
             ->join('ref.bentuk_pendidikan as bp','bp.bentuk_pendidikan_id','=','sekolah.bentuk_pendidikan_id')
@@ -62,6 +65,7 @@ class SekolahController extends Controller
                 'bp.nama as bentuk',
                 'kouta.kuota AS kouta',
                 DB::raw("(case when sekolah.status_sekolah = 1 then 'Negeri' else 'Swasta' end) as status")
+                // DB::raw('null as kode_registrasi')
             )
         	->orderBy('sekolah.nama', 'ASC');
 
@@ -73,6 +77,11 @@ class SekolahController extends Controller
         if($status_sekolah){
         	$count = $count->where('sekolah.status_sekolah', '=', $status_sekolah);
         	$sekolahs = $sekolahs->where('sekolah.status_sekolah', '=', $status_sekolah);
+        }
+        
+        if($npsn){
+        	$count = $count->where('sekolah.npsn', '=', $npsn);
+        	$sekolahs = $sekolahs->where('sekolah.npsn', '=', $npsn);
         }
         
         if($bentuk_pendidikan_id){
@@ -118,6 +127,10 @@ class SekolahController extends Controller
                 $pendaftar->where('urut_pilihan','=',$nomor_pilihan);
             }
 
+            if($tampil_koreg){
+                $sekolahs[$i]->koreg = (strtoupper(base_convert($sekolahs[$i]->kode_registrasi,10,32)) == $koreg ? '1' : '0');
+                // $sekolahs[$i]->koreg_dev = strtoupper(base_convert($sekolahs[$i]->kode_registrasi,10,32));
+            }
 
             $pendaftar = $pendaftar->count();
             $kouta = $key->kouta;

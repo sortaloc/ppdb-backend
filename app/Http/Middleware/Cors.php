@@ -30,6 +30,7 @@ class Cors
             "http://test.one",
             "http://sioman.nufaza.co.id:8090",
             "http://portal-disdiklmj.web.id",
+            "http://ppdb-malukutengah.diskuis.id",
             "*",
             null
         ];
