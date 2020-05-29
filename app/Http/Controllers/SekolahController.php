@@ -129,7 +129,7 @@ class SekolahController extends Controller
 
             if($tampil_koreg){
                 $sekolahs[$i]->koreg = (strtoupper(base_convert($sekolahs[$i]->kode_registrasi,10,32)) == $koreg ? '1' : '0');
-                // $sekolahs[$i]->koreg_dev = strtoupper(base_convert($sekolahs[$i]->kode_registrasi,10,32));
+                $sekolahs[$i]->koreg_dev = strtoupper(base_convert($sekolahs[$i]->kode_registrasi,10,32));
             }
 
             $pendaftar = $pendaftar->count();

@@ -286,13 +286,13 @@ class CalonPesertaDidikController extends Controller
 			->orderBy('ppdb.calon_peserta_didik.nama', 'ASC');
 			// ->orderBy('ppdb.calon_peserta_didik.create_date', 'DESC');
 
-		if($sekolah_id){
-			$calonPDs->join('ppdb.pilihan_sekolah', function($join)
-			{
-				$join->on('ppdb.pilihan_sekolah.calon_peserta_didik_id','=', 'ppdb.calon_peserta_didik.calon_peserta_didik_id');
-				$join->on('peringkat.kuis_id','=', 'pengguna_kuis.kuis_id');
-			});
-		}
+		// if($sekolah_id){
+		// 	$calonPDs->join('ppdb.pilihan_sekolah', function($join)
+		// 	{
+		// 		$join->on('ppdb.pilihan_sekolah.calon_peserta_didik_id','=', 'ppdb.calon_peserta_didik.calon_peserta_didik_id');
+		// 		$join->on('peringkat.kuis_id','=', 'pengguna_kuis.kuis_id');
+		// 	});
+		// }
 			
 		if($calon_peserta_didik_id){
 			$count->where('ppdb.calon_peserta_didik.calon_peserta_didik_id','=',$calon_peserta_didik_id);
@@ -651,6 +651,7 @@ class CalonPesertaDidikController extends Controller
 		$fetch_cek = DB::connection('sqlsrv_2')
 			->table('ppdb.pilihan_sekolah')
 			->join('ppdb.sekolah as sekolah','sekolah.sekolah_id','=','ppdb.pilihan_sekolah.sekolah_id')
+			->join('ref.jalur as jalur','jalur.jalur_id','=','ppdb.pilihan_sekolah.jalur_id')
 			->leftJoin('ref.mst_wilayah AS kec', 'kec.kode_wilayah', '=', DB::raw("LEFT(sekolah.kode_wilayah,6)"))
 			->leftJoin('ref.mst_wilayah AS kab', 'kab.kode_wilayah', '=', 'kec.mst_kode_wilayah')
 			->leftJoin('ref.mst_wilayah AS prov', 'prov.kode_wilayah', '=', 'kab.mst_kode_wilayah')
@@ -668,7 +669,8 @@ class CalonPesertaDidikController extends Controller
 				'kab.nama as kabupaten',
 				'prov.nama as provinsi',
 				'sekolah.lintang',
-				'sekolah.bujur'
+				'sekolah.bujur',
+				'jalur.nama as jalur'
 			)
 			->orderBy('urut_pilihan','ASC')
 			->get();
