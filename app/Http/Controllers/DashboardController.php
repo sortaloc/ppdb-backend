@@ -7,206 +7,202 @@ use DB;
 
 class DashboardController extends Controller
 {
-    public function hendel_now(Request $request)
+    public function beranda_dinas(Request $request)
     {
-        return "PMP";
-    }
+        $kode_wilayah = $request->kode_wilayah ? $request->kode_wilayah : '052100';
 
-	public function index(Request $request)
-	{
-		$data['berita_top_5']     = $this->berita_list_top_5();
-		$data['berita_top_five']  = $this->berita_list_top_five();
-		$data['kegiatan_top_5']   = $this->kegiatan_top_5();
-        $data['daftar_lpmp']      = $this->daftar_lpmp_top();
-		$data['title']            = 'beranda';
-		return view('dashboard', compact('data'));
-	}
+        // Jadwal
+        $jadwal = DB::connection('sqlsrv_2')
+            ->table('ppdb.jadwal_kegiatan')
+            ->select('nama', 'tanggal_mulai')
+            ->limit(4)
+            ->where('soft_delete', 0)
+            ->where('kode_wilayah', $kode_wilayah)
+            ->orderBy('create_date', 'DESC')
+            ->get();
+        // END Jadwal
 
-	public function berita($page = 0, $pageSize = 6)
-	{
-        $page       = $page == 0 ? $page : ($page - 1);
-        $pageSize   = $pageSize;
-        $start      = ($page) * $pageSize;
+        // Jalur
+        $jalur = DB::connection('sqlsrv_2')
+            ->table('ref.jalur AS jalur')
+            ->select('jalur.jalur_id', 'jalur.nama', DB::raw('COUNT(pilihan.jalur_id) AS total_semua'))
+            ->join('ppdb.pilihan_sekolah AS pilihan', 'jalur.jalur_id', '=', 'pilihan.jalur_id')
+            ->join('ppdb.sekolah AS sekolah', 'pilihan.sekolah_id', '=', 'sekolah.sekolah_id')
+            ->where('sekolah.soft_delete', 0)
+            ->where(DB::raw('LEFT(sekolah.kode_wilayah, 4)'), substr($kode_wilayah, 0, 4))
+            ->groupBy(
+                'jalur.jalur_id',
+                'jalur.nama',
+                'pilihan.jalur_id'
+            )
+            ->orderBy('jalur.jalur_id', 'ASC')
+            ->get();
 
-        $berita = DB::table('view_berita')->orderBy('last_update', 'DESC')->where(['soft_delete' => '0', 'jenis_berita_id' => '1']);
+        $ttl_sd = 0;
+        $ttl_smp = 0;
 
-        $return   = [
-            'page'  => intval($page) + 1,
-            'pages' => ceil(($berita->count() / $pageSize)),
-            'count' => $berita->count(),
-            'data'  => $berita->take($pageSize)->skip($start)->get(),
-            'title' => 'berita',
-            'berita_top_5' => $this->berita_list_top_5(),
-            'kegiatan_top_5' => $this->kegiatan_top_5(),
-        ];
-
-        $no = $start + 1;
-        for ($i=0; $i < count($return['data']); $i++) { 
-            $return['data'][$i]->images = $return['data'][$i]->images == '' ? '/portal_pmp/assets/img/default.jpg' : $return['data'][$i]->images;
-            $return['data'][$i]->deskripsi = str_replace("&nbsp;", "", substr(str_replace("\n", "", strip_tags($return['data'][$i]->konten_berita)), 0, 100))."...";
-            unset($return['data'][$i]->konten_berita);
-        }
-
-        $data = $return;
-
-		return view('berita', compact('data'));
-	}
-
-	public function berita_detail(Request $request)
-	{
-		$data['berita'] = DB::table('view_berita')->where($request->all('slug'))->where('soft_delete', '0')->limit('1')->get()->toArray();
-		$data['berita_top_5'] = $this->berita_list_top_5();
-		$data['kegiatan_top_5'] = $this->kegiatan_top_5();
-		$data['kategori'] = $this->kategori_list();
-		$data['title'] = 'berita';
-		return view('berita_detail', compact('data'));
-	}
-
-	public function unduhan(Request $request)
-	{
-        $data['berita_top_5'] = $this->berita_list_top_5();
-        $data['kegiatan_top_5'] = $this->kegiatan_top_5();
-        $data['unduhan_online'] = $this->unduhan_('Online');
-        $data['unduhan_offline'] = $this->unduhan_('Offline');
-        $data['unduhan_andrroid'] = $this->unduhan_('android');
-        $data['unduhan_ios'] = $this->unduhan_('IOS');
-        $data['unduhan_dokumen'] = $this->unduhan_('Dokumen');
-		$data['title'] = 'unduhan';
-		return view('unduhan', compact('data'));
-	}
-
-    public function daftar_lpmp(Request $request)
-    {
-        $data['daftar_lpmp'] = DB::table('view_lpmp')->where('soft_delete', '0')->get()->toArray();
-        $data['berita_top_5'] = $this->berita_list_top_5();
-		$data['kegiatan_top_5'] = $this->kegiatan_top_5();
-        $data['title'] = 'daftar-lpmp';
-		return view('daftar_lpmp', compact('data'));
-    }
-
-    public function lpmp_detail(Request $request)
-    {
-        $where = $request->all('lpmp_id');
-        $data['data'] = DB::table('view_lpmp')->where($where)->get()->toArray();
-        $data['count'] = count($data['data']);
-        return $data;
-    }
-
-    public function daftar_lpmp_top($limit = 8)
-    {
-        $LPMP = DB::table('view_lpmp')->limit($limit)->orderBy('create_date', 'DESC')->get()->toArray();
-        return $LPMP;
-    }
-
-	public function unduhan_($jenis_unduhan='')
-	{
-		$Unduhan = DB::table('view_unduhan')->where('jenis_unduhan', $jenis_unduhan)->get()->toArray();
-		return $Unduhan;
-	}
-
-	public function gambar_pertama($string, $default = NULL) {
-        preg_match('@<img.+src="(.*)".*>@Uims', $string, $matches);
-        $src = $matches ? $matches[1] : $default;
-        return $src;
-    }
-    
-    public function berita_list_top_5()
-    {
-        $Berita = DB::table('view_berita')
-        ->orderBy('create_date', 'DESC')
-        ->where('soft_delete', '0')
-        ->where('jenis_berita_id', '1') //Berita Pusat
-        ->take('10')
-        ->get()
-        ->toArray();
+        $jalur_chart['label'] = [];
+        $jalur_chart['data'] = [];
 
         $i = 0;
-        foreach ($Berita as $key) {
-            $Berita[$i]->images = $Berita[$i]->images == '' ? '/portal_pmp/assets/img/default.jpg' : $Berita[$i]->images;
-            $Berita[$i]->deskripsi = str_replace("&nbsp;", "", substr(str_replace("\n", "", strip_tags($Berita[$i]->konten_berita)), 0, 100))."...";
-            unset($Berita[$i]->konten_berita);
+        foreach ($jalur as $key) {
+            $sd = DB::connection('sqlsrv_2')
+                ->table('ppdb.pilihan_sekolah')
+                ->join('ppdb.sekolah', 'ppdb.pilihan_sekolah.sekolah_id', '=', 'ppdb.sekolah.sekolah_id')
+                ->where('ppdb.pilihan_sekolah.jalur_id', $key->jalur_id)
+                ->where(DB::raw('LEFT(sekolah.kode_wilayah, 4)'), substr($kode_wilayah, 0, 4))
+                ->where('ppdb.sekolah.bentuk_pendidikan_id', 5)
+                ->count();
+
+            $smp = DB::connection('sqlsrv_2')
+                ->table('ppdb.pilihan_sekolah')
+                ->join('ppdb.sekolah', 'ppdb.pilihan_sekolah.sekolah_id', '=', 'ppdb.sekolah.sekolah_id')
+                ->where('ppdb.pilihan_sekolah.jalur_id', $key->jalur_id)
+                ->where(DB::raw('LEFT(sekolah.kode_wilayah, 4)'), substr($kode_wilayah, 0, 4))
+                ->where('ppdb.sekolah.bentuk_pendidikan_id', 6)
+                ->count();
+
+            $jalur[$i]->sd = $sd;
+            $jalur[$i]->smp = $smp;
+
+            $ttl_sd = $ttl_sd + $sd;
+            $ttl_smp = $ttl_smp + $smp;
+
+            $jalur_chart['label'][$i] = $key->nama;
+            $jalur_chart['data'][$i] = $key->total_semua;
+
             $i++;
         }
 
-        $return = [
-            'data' => $Berita,
-            'count' => count($Berita),
+        // END Jalur
+
+        // Status Pendaftaram
+        $Status_terima['sd'] = 0;
+        $Status_terima['smp'] = 0;
+        // END Status Pendaftaran
+
+        // Widget
+        $kuota = DB::connection('sqlsrv_2')->table('ppdb.kuota_sekolah')->select(DB::raw('SUM(kuota) AS jumlah_kuota'))->get();
+        $kuota_terima = 0;
+        $kuota_pendaftar = DB::connection('sqlsrv_2')->table('ppdb.pilihan_sekolah')->where('soft_delete', 0)->count();
+
+        $kuota_chart = [
+            'label' => ['Kuota', 'Pendaftar', 'Terima'],
+            'data' => [ $kuota[0]->jumlah_kuota, $kuota_pendaftar, $kuota_terima ]
         ];
 
-        return $return;
-    }
+        $pilihan_sekolah = DB::connection('sqlsrv_2')
+            ->table('ppdb.pilihan_sekolah AS pilihan_sekolah')
+            ->select(
+                'urut_pilihan',
+                DB::raw('COUNT(urut_pilihan) AS count')
+            )
+            ->join('ppdb.sekolah', 'pilihan_sekolah.sekolah_id', '=', 'sekolah.sekolah_id')
+            ->where(DB::raw('LEFT(sekolah.kode_wilayah, 4)'), substr($kode_wilayah, 0, 4))
+            ->groupBy('pilihan_sekolah.urut_pilihan')
+            ->get();
 
-    public function berita_list_top_five()
-    {
-        $Berita = DB::table('view_berita')
-        ->orderBy('create_date', 'DESC')
-        ->where('soft_delete', '0')
-        ->where('jenis_berita_id', '1') //Berita Pusat
-        ->take('5')
-        ->get()
-        ->toArray();
+        $pilihan_sekolah_chart['label'] = [];
+        $pilihan_sekolah_chart['data'] = [];
 
         $i = 0;
-        foreach ($Berita as $key) {
-            $Berita[$i]->images = $Berita[$i]->images == '' ? '/portal_pmp/assets/img/default.jpg' : $Berita[$i]->images;
-            $Berita[$i]->deskripsi = str_replace("&nbsp;", "", substr(str_replace("\n", "", strip_tags($Berita[$i]->konten_berita)), 0, 100))."...";
-            unset($Berita[$i]->konten_berita);
+        foreach ($pilihan_sekolah as $key) {
+            $pilihan_sekolah_chart['label'][$i] = "Pilihan " . $key->urut_pilihan;
+            $pilihan_sekolah_chart['data'][$i] = intval($key->count);
+
             $i++;
         }
 
-        $return = [
-            'data' => $Berita,
-            'count' => count($Berita),
-        ];
+        // END Widget
 
-        return $return;
+        return Response([
+            'jadwal' => $jadwal,
+            'jalur' => [
+                'rows' => $jalur,
+                'count_sd' => $ttl_sd,
+                'count_smp' => $ttl_smp,
+            ],
+            'jalur_chart' => $jalur_chart,
+            'status_terima' => $Status_terima,
+            'kuota' => [
+                'kuota' => $kuota[0]->jumlah_kuota,
+                'terima' => $kuota_terima,
+                'pendaftar' => $kuota_pendaftar,
+            ],
+            'kuota_chart' => $kuota_chart,
+            'pilihan_sekolah' => $pilihan_sekolah,
+            'pilihan_sekolah_chart' => $pilihan_sekolah_chart
+        ], 200);
     }
 
-    public function kegiatan_top_5()
+    public function beranda_sekolah(Request $request)
     {
-    	$Kegiatan = DB::table('view_kegiatan')->limit(5)->orderBy('create_date', 'DESC')->get()->toArray();
-    	return $Kegiatan;
-    }
+        $sekolah_id = $request->sekolah_id ? $request->sekolah_id : '';
 
-    public function kategori_list()
-    {
-    	$Kategori = DB::table('view_kategori')->get()->toArray();
-    	return $Kategori;
-    }
+        $sekolah = DB::connection('sqlsrv_2')
+            ->table('ppdb.sekolah AS sekolah')
+            ->select(
+                'sekolah.nama',
+                'sekolah.npsn',
+                'sekolah.kecamatan',
+                'sekolah.alamat_jalan',
+                'sekolah.lintang',
+                'sekolah.bujur',
+                'kuota_sekolah.kuota',
+                'kuota_sekolah.kuota_0100',
+                'kuota_sekolah.kuota_0200',
+                'kuota_sekolah.kuota_0300',
+                'kuota_sekolah.kuota_0400',
+                'kuota_sekolah.kuota_0500'
+            )
+            ->leftjoin('ppdb.kuota_sekolah AS kuota_sekolah', 'sekolah.sekolah_id', '=', 'kuota_sekolah.sekolah_id')
+            ->where('sekolah.sekolah_id', $sekolah_id)
+            ->first();
 
-    public function berita_list(Request $request)
-    {
-        $data       = $request->all('page', 'pageSize');
-        $page       = $data['page'] === '' ? 0 : $data['page'];
-        $pageSize   = $data['pageSize'] === '' ? 10 : $data['pageSize'];
-        $start      = ($page) * $pageSize;
+        // kuota jalur
+        $jalur = DB::connection('sqlsrv_2')
+            ->table('ref.jalur AS jalur')
+            ->select(
+                'jalur_id',
+                'nama',
+                DB::raw("(SELECT COUNT(calon_peserta_didik_id) FROM ppdb.pilihan_sekolah WHERE sekolah_id = '{$sekolah_id}' AND jalur_id = jalur.jalur_id) AS pendaftar")
+            )
+            ->orderBy('jalur_id')
+            ->where('level_jalur', 1)
+            ->get();
 
-        $berita = DB::table('view_berita')->orderBy('last_update', 'DESC')->where(['soft_delete' => '0', 'jenis_berita_id' => '1']);
+        $kuota_pendaftar = [];
 
-        $return   = [
-            'page'  => intval($page),
-            'pages' => ceil(($berita->count() / $pageSize)),
-            'count' => $berita->count(),
-            'data'  => $berita->take($pageSize)->skip($start)->get(),
-        ];
-
-        $no = $start + 1;
-        for ($i=0; $i < count($return['data']); $i++) { 
-            $return['data'][$i]->images = $return['data'][$i]->images == '' ? '/portal_pmp/assets/img/default.jpg' : $return['data'][$i]->images;
-            $return['data'][$i]->deskripsi = substr(str_replace("\n", "", strip_tags($return['data'][$i]->konten_berita)), 0, 100)."...";
-            unset($return['data'][$i]->konten_berita);
+        $i = 0;
+        foreach ($jalur as $key) {
+            $kuota_pendaftar['kuota_'.$key->jalur_id] = $key;
+            $kuota_pendaftar['kuota_'.$key->jalur_id]->terima = 0;
         }
+        //END Kuota Jalur
 
-        return Response($return);
-    }
+        // Pilihan
+        $pilihan_sekolah = DB::connection('sqlsrv_2')
+            ->table('ppdb.pilihan_sekolah AS pilihan_sekolah')
+            ->select(
+                'pilihan_sekolah.urut_pilihan',
+                DB::raw('COUNT(pilihan_sekolah.urut_pilihan) AS count')
+            )
+            ->where('pilihan_sekolah.sekolah_id', $sekolah_id)
+            ->groupBy(
+                'pilihan_sekolah.urut_pilihan',
+                'pilihan_sekolah.sekolah_id'
+            )
+            ->orderBy(
+                'pilihan_sekolah.urut_pilihan', 'ASC'
+            )
+            ->get();
 
-    public function berita_satu(Request $request)
-    {
-        $Berita = DB::table('view_berita')
-        ->where($request->all())
-        ->where('soft_delete', '0')
-        ->get();
+        //END Pilihan
 
-        return Response($Berita);
+        return Response([
+            'sekolah' => $sekolah,
+            'pendaftar' => $kuota_pendaftar,
+            'pilihan_sekolah' => $pilihan_sekolah
+        ], 200);
     }
 }

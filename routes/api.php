@@ -20,6 +20,11 @@ use Illuminate\Http\Request;
 // Route::prefix('Buku')->group(function () {
 	// });
 
+Route::prefix('Beranda')->group(function(){
+	Route::post('beranda_dinas', 'DashboardController@beranda_dinas');
+	Route::post('beranda_sekolah', 'DashboardController@beranda_sekolah');
+});
+
 Route::prefix('Pertanyaan')->group(function () {
 	Route::post('simpanPantauan', 'PertanyaanController@simpanPantauan');
 	Route::post('simpanPertanyaan', 'PertanyaanController@simpanPertanyaan');
