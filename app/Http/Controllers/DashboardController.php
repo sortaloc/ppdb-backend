@@ -15,7 +15,7 @@ class DashboardController extends Controller
         $jadwal = DB::connection('sqlsrv_2')
             ->table('ppdb.jadwal_kegiatan')
             ->select('nama', 'tanggal_mulai')
-            ->limit(3)
+            ->limit(4)
             ->where('soft_delete', 0)
             ->where('kode_wilayah', $kode_wilayah)
             ->orderBy('create_date', 'DESC')
@@ -41,6 +41,9 @@ class DashboardController extends Controller
         $ttl_sd = 0;
         $ttl_smp = 0;
 
+        $jalur_chart['label'] = [];
+        $jalur_chart['data'] = [];
+
         $i = 0;
         foreach ($jalur as $key) {
             $sd = DB::connection('sqlsrv_2')
@@ -65,32 +68,50 @@ class DashboardController extends Controller
             $ttl_sd = $ttl_sd + $sd;
             $ttl_smp = $ttl_smp + $smp;
 
+            $jalur_chart['label'][$i] = $key->nama;
+            $jalur_chart['data'][$i] = $key->total_semua;
+
             $i++;
         }
 
         // END Jalur
 
         // Status Pendaftaram
-        $Status_terima['sd'] = DB::connection('sqlsrv_2')
-            ->table('ppdb.konfirmasi_pendaftaran')
-            ->rightJoin('ppdb.pilihan_sekolah AS pilihan_sekolah', 'ppdb.konfirmasi_pendaftaran.calon_peserta_didik_id', '=', 'pilihan_sekolah.calon_peserta_didik_id')
-            ->join('ppdb.sekolah AS sekolah', 'pilihan_sekolah.sekolah_id', '=', 'sekolah.sekolah_id')
-            ->where('ppdb.konfirmasi_pendaftaran.status', 9)
-            ->where('ppdb.konfirmasi_pendaftaran.soft_delete', 0)
-            ->where('sekolah.bentuk_pendidikan_id', 5)
-            ->count();
-
-        $Status_terima['smp'] = DB::connection('sqlsrv_2')
-            ->table('ppdb.konfirmasi_pendaftaran')
-            ->where('status', 9)
-            ->where('soft_delete', 0)
-            ->count();
+        $Status_terima['sd'] = 0;
+        $Status_terima['smp'] = 0;
         // END Status Pendaftaran
 
         // Widget
         $kuota = DB::connection('sqlsrv_2')->table('ppdb.kuota_sekolah')->select(DB::raw('SUM(kuota) AS jumlah_kuota'))->get();
-        $kuoto_terima = DB::connection('sqlsrv_2')->table('ppdb.konfirmasi_pendaftaran')->select(DB::raw('SUM(kuota) AS jumlah_kuota'))->where('status', 9)->count();
-        $kuoto_pendaftar = DB::connection('sqlsrv_2')->table('ppdb.pilihan_sekolah')->where('soft_delete', 0)->count();
+        $kuota_terima = 0;
+        $kuota_pendaftar = DB::connection('sqlsrv_2')->table('ppdb.pilihan_sekolah')->where('soft_delete', 0)->count();
+
+        $kuota_chart = [
+            'label' => ['Kuota', 'Pendaftar', 'Terima'],
+            'data' => [ $kuota[0]->jumlah_kuota, $kuota_pendaftar, $kuota_terima ]
+        ];
+
+        $pilihan_sekolah = DB::connection('sqlsrv_2')
+            ->table('ppdb.pilihan_sekolah AS pilihan_sekolah')
+            ->select(
+                'urut_pilihan',
+                DB::raw('COUNT(urut_pilihan) AS count')
+            )
+            ->join('ppdb.sekolah', 'pilihan_sekolah.sekolah_id', '=', 'sekolah.sekolah_id')
+            ->where(DB::raw('LEFT(sekolah.kode_wilayah, 4)'), substr($kode_wilayah, 0, 4))
+            ->groupBy('pilihan_sekolah.urut_pilihan')
+            ->get();
+
+        $pilihan_sekolah_chart['label'] = [];
+        $pilihan_sekolah_chart['data'] = [];
+
+        $i = 0;
+        foreach ($pilihan_sekolah as $key) {
+            $pilihan_sekolah_chart['label'][$i] = "Pilihan " . $key->urut_pilihan;
+            $pilihan_sekolah_chart['data'][$i] = intval($key->count);
+
+            $i++;
+        }
 
         // END Widget
 
@@ -101,12 +122,16 @@ class DashboardController extends Controller
                 'count_sd' => $ttl_sd,
                 'count_smp' => $ttl_smp,
             ],
+            'jalur_chart' => $jalur_chart,
             'status_terima' => $Status_terima,
             'kuota' => [
                 'kuota' => $kuota[0]->jumlah_kuota,
-                'terima' => $kuoto_terima,
-                'pendaftar' => $kuoto_pendaftar
-            ]
+                'terima' => $kuota_terima,
+                'pendaftar' => $kuota_pendaftar,
+            ],
+            'kuota_chart' => $kuota_chart,
+            'pilihan_sekolah' => $pilihan_sekolah,
+            'pilihan_sekolah_chart' => $pilihan_sekolah_chart
         ], 200);
     }
 
@@ -134,20 +159,50 @@ class DashboardController extends Controller
             ->where('sekolah.sekolah_id', $sekolah_id)
             ->first();
 
-        $pendaftar = DB::connection('sqlsrv_2')
-            ->table('ppdb.pilihan_sekolah')
+        // kuota jalur
+        $jalur = DB::connection('sqlsrv_2')
+            ->table('ref.jalur AS jalur')
             ->select(
                 'jalur_id',
-                DB::raw('COUNT(jalur_id)')
+                'nama',
+                DB::raw("(SELECT COUNT(calon_peserta_didik_id) FROM ppdb.pilihan_sekolah WHERE sekolah_id = '{$sekolah_id}' AND jalur_id = jalur.jalur_id) AS pendaftar")
             )
-            ->where('sekolah_id', $sekolah_id)
-            ->where('soft_delete', 0)
-            ->groupBy('jalur_id')
+            ->orderBy('jalur_id')
+            ->where('level_jalur', 1)
             ->get();
+
+        $kuota_pendaftar = [];
+
+        $i = 0;
+        foreach ($jalur as $key) {
+            $kuota_pendaftar['kuota_'.$key->jalur_id] = $key;
+            $kuota_pendaftar['kuota_'.$key->jalur_id]->terima = 0;
+        }
+        //END Kuota Jalur
+
+        // Pilihan
+        $pilihan_sekolah = DB::connection('sqlsrv_2')
+            ->table('ppdb.pilihan_sekolah AS pilihan_sekolah')
+            ->select(
+                'pilihan_sekolah.urut_pilihan',
+                DB::raw('COUNT(pilihan_sekolah.urut_pilihan) AS count')
+            )
+            ->where('pilihan_sekolah.sekolah_id', $sekolah_id)
+            ->groupBy(
+                'pilihan_sekolah.urut_pilihan',
+                'pilihan_sekolah.sekolah_id'
+            )
+            ->orderBy(
+                'pilihan_sekolah.urut_pilihan', 'ASC'
+            )
+            ->get();
+
+        //END Pilihan
 
         return Response([
             'sekolah' => $sekolah,
-            'pendaftar' => $pendaftar
+            'pendaftar' => $kuota_pendaftar,
+            'pilihan_sekolah' => $pilihan_sekolah
         ], 200);
     }
 }
