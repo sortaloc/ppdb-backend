@@ -11,6 +11,241 @@ use DB;
 
 class CalonPesertaDidikController extends Controller
 {
+	public function RekapKuotaSekolah(Request $request){
+		$sekolah_id = $request->sekolah_id ? $request->sekolah_id : null;
+
+		$fetch = DB::connection('sqlsrv_2')
+				->select(DB::raw("SELECT
+									ref.jalur.nama,
+									ref.jalur.jalur_id,
+									kuota_jalur_def.kuota as kuota,
+									COALESCE(kuota_jalur_sekolah.jumlah,0) as jumlah,
+									CASE WHEN kuota_jalur_def.kuota > 0 THEN ( COALESCE(kuota_jalur_sekolah.jumlah,0) / CAST(kuota_jalur_def.kuota as float) * 100 ) ELSE 0 END as persen,
+									tanggal_rekap
+								FROM
+									REF.jalur 
+									LEFT JOIN (
+									SELECT
+										jalur_id,
+										sum(1) as jumlah,
+										min(diterima.tanggal_rekap) as tanggal_rekap
+									FROM
+										rekap.peringkat_ppdb_tahap_1_2 diterima
+										JOIN ppdb.calon_peserta_didik calon ON calon.calon_peserta_didik_id = diterima.calon_peserta_didik_id 
+									WHERE
+										sekolah_id = '{$sekolah_id}' 
+									GROUP BY
+										jalur_id
+									) kuota_jalur_sekolah on kuota_jalur_sekolah.jalur_id = ref.jalur.jalur_id
+									LEFT JOIN (
+									SELECT
+										jalur.jalur_id,
+										COALESCE((case 
+											when jalur.jalur_id = '0100' then kuota_0100
+											when jalur.jalur_id = '0200' then kuota_0200
+											when jalur.jalur_id = '0300' then kuota_0300
+											when jalur.jalur_id = '0400' then kuota_0400
+											when jalur.jalur_id = '0500' then kuota_0500
+											else 0
+										end),0) as kuota
+									FROM
+										ppdb.kuota_sekolah 
+										JOIN ref.jalur jalur on 1 = 1 and jalur.level_jalur = 1
+									WHERE
+										sekolah_id = '{$sekolah_id}'
+									) kuota_jalur_def on kuota_jalur_def.jalur_id = ref.jalur.jalur_id
+								WHERE
+									level_jalur = 1 
+									AND expired_date IS NULL"));
+		return response(
+			[
+				'rows' => $fetch,
+				'count' => sizeof($fetch),
+				'countAll' => sizeof($fetch)
+			],
+			200
+		);
+	}
+
+	public function PeringkatPesertaDidik(Request $request){
+		$sekolah_id = $request->sekolah_id ? $request->sekolah_id : null;
+		$limit = $request->limit ? $request->limit : 20;
+		$start = $request->start ? $request->start : 0;
+		$urut = $request->urut ? $request->urut : 'jarak_asc';
+		$jalur_id = $request->jalur_id ? $request->jalur_id : null;
+
+		if($jalur_id){
+			$param_jalur = " AND diterima.jalur_id = '".$jalur_id."'";
+		}else{
+			$param_jalur = "";
+		}
+
+		$fetch = DB::connection('sqlsrv_2')
+				->select(DB::raw("SELECT
+									diterima.*,
+									calon.*,
+									pengguna.nama as pendaftar,
+									pengguna.username as email_pendaftar 
+								FROM
+									rekap.peringkat_ppdb_tahap_1_2 diterima
+								JOIN ppdb.calon_peserta_didik calon ON calon.calon_peserta_didik_id = diterima.calon_peserta_didik_id 
+								LEFT JOIN pengguna on pengguna.pengguna_Id = calon.pengguna_id
+								WHERE
+									diterima.sekolah_id = '{$sekolah_id}'
+								{$param_jalur}
+								ORDER BY
+									".($urut == 'jarak_asc' ? "diterima.jarak asc" : ($urut == 'jarak_desc' ? "diterima.jarak desc" : ($urut == 'nama_asc' ? "diterima.nama asc" : ($urut == 'nama_desc' ? "diterima.nama desc" : "diterima.jarak asc"))))."
+								OFFSET {$start} LIMIT {$limit}
+								"));
+		
+		$fetch_count = DB::connection('sqlsrv_2')
+					->select(DB::raw("SELECT
+										sum(1) as total
+									FROM
+										rekap.peringkat_ppdb_tahap_1_2 diterima
+									JOIN ppdb.calon_peserta_didik calon ON calon.calon_peserta_didik_id = diterima.calon_peserta_didik_id 
+									WHERE
+										diterima.sekolah_id = '{$sekolah_id}'
+									{$param_jalur}
+									"));
+
+		for ($i=0; $i < sizeof($fetch); $i++) { 
+			//pas foto
+			$fetch_foto = DB::connection('sqlsrv_2')
+			->table('ppdb.berkas_calon')
+			->where('calon_peserta_didik_id','=',$fetch[$i]->calon_peserta_didik_id)
+			->where('soft_delete','=',0)
+			->where('jenis_berkas_id','=',8)
+			->get();
+
+			if(sizeof($fetch_foto) > 0){
+				$fetch[$i]->pas_foto = $fetch_foto[0]->nama_file;
+			}else{
+				$fetch[$i]->pas_foto = '/assets/img/generic-avatar.png';
+			}
+
+			//konfirmasi
+			$fetch_foto = DB::connection('sqlsrv_2')
+			->table('ppdb.konfirmasi_pendaftaran')
+			->where('calon_peserta_didik_id','=',$fetch[$i]->calon_peserta_didik_id)
+			->where('soft_delete','=',0)
+			// ->where('jenis_berkas_id','=',8)
+			->get();
+
+			if(sizeof($fetch_foto) > 0){
+				$fetch[$i]->status_konfirmasi = $fetch_foto[0]->status;
+				$fetch[$i]->tanggal_konfirmasi = $fetch_foto[0]->last_update;
+			}else{
+				$fetch[$i]->status_konfirmasi = 0;
+				$fetch[$i]->tanggal_konfirmasi = '-';
+			}
+
+			//sekolah_asal
+			$fetch_foto = DB::connection('sqlsrv_2')
+			->table('ppdb.sekolah')
+			->where('sekolah_id','=',$fetch[$i]->asal_sekolah_id)
+			->where('soft_delete','=',0)
+			->get();
+
+			if(sizeof($fetch_foto) > 0){
+				$fetch[$i]->sekolah_asal = $fetch_foto[0];
+				// $fetch[$i]->tingkat_pendidikan_id = $fetch_foto[0];
+			}else{
+				$fetch[$i]->sekolah_asal = [];
+			}
+
+			//pas foto
+			$fetch_foto = DB::connection('sqlsrv_2')
+			->table('ppdb.peserta_didik_diterima')
+			->join('ppdb.sekolah as sekolah','sekolah.sekolah_id','=','ppdb.peserta_didik_diterima.sekolah_id')
+			->where('peserta_didik_id','=',$fetch[$i]->calon_peserta_didik_id)
+			->where('ppdb.peserta_didik_diterima.soft_delete','=',0)
+			->select(
+				'ppdb.peserta_didik_diterima.*',
+				'sekolah.nama as nama_sekolah'
+			)
+			->get();
+
+			if(sizeof($fetch_foto) > 0){
+				$fetch[$i]->verifikator = $fetch_foto[0]->nama_sekolah;
+			}else{
+				$fetch[$i]->vefifikator = null;
+			}
+		}
+		
+
+		return response(
+			[
+				'rows' => $fetch,
+				'count' => sizeof($fetch),
+				'countAll' => $fetch_count[0]->total
+			],
+			200
+		);
+
+	}
+
+	public function simpanPesertaDidikDiterima(Request $request){
+		$peserta_didik_id = $request->input('calon_peserta_didik_id') ? $request->input('calon_peserta_didik_id') : null;
+		$sekolah_id = $request->input('sekolah_id') ? $request->input('sekolah_id') : null;
+		$status_terima = $request->input('status_terima') ? $request->input('status_terima') : null;
+		$periode_kegiatan_id = $request->input('periode_kegiatan_id') ? $request->input('periode_kegiatan_id') : '2020';
+
+		$fetch_cek = DB::connection('sqlsrv_2')
+					->table('ppdb.peserta_didik_diterima')
+					->where('peserta_didik_id','=',$peserta_didik_id)
+					->where('sekolah_id','=',$sekolah_id)
+					->where('periode_kegiatan_id','=',$periode_kegiatan_id)
+					->get();
+		
+		if(sizeof($fetch_cek) > 0){
+			//sudah ada
+			$exe = DB::connection('sqlsrv_2')->table('ppdb.peserta_didik_diterima')
+			->where('peserta_didik_id','=',$peserta_didik_id)
+			->where('sekolah_id','=',$sekolah_id)
+			->where('periode_kegiatan_id','=',$periode_kegiatan_id)
+			->update([
+				'soft_delete' => 0,
+				'status_terima' => $status_terima,
+				'last_update' => date('Y-m-d H:i:s')
+			]);
+		}else{
+			//belum ada
+			$exe = DB::connection('sqlsrv_2')->table('ppdb.peserta_didik_diterima')
+			->insert([
+				'peserta_didik_id' =>  $peserta_didik_id,
+				'periode_kegiatan_id' => $periode_kegiatan_id,
+				'status_terima' => $status_terima,
+				'pengguna_id' => $sekolah_id,
+				'create_date' => DB::raw('now()::timestamp(0)'),
+				'last_update' => DB::raw('now()::timestamp(0)'),
+				'soft_delete' => 0,
+				'sekolah_id' => $sekolah_id
+			]);
+		}
+
+		if($exe){
+			return response(
+				[
+					'rows' => DB::connection('sqlsrv_2')->table('ppdb.peserta_didik_diterima')
+								->where('peserta_didik_id','=',$peserta_didik_id)
+								->where('sekolah_id','=',$sekolah_id)
+								->where('periode_kegiatan_id','=',$periode_kegiatan_id)
+								->get(),
+					'success' => true
+				],
+				200
+			);
+		}else{
+			return response(
+				[
+					'rows' => [],
+					'success' => false
+				],
+				201
+			);
+		}
+	}
 
 	public function getRekapTotal(Request $request){
 		$sql = "SELECT 
@@ -108,6 +343,10 @@ class CalonPesertaDidikController extends Controller
 		$searchText = $request->searchText ? $request->searchText : null;
 		$urut = $request->urut ? $request->urut : null;
 		$jalur_id = $request->jalur_id ? $request->jalur_id : null;
+		$urut_pilihan = $request->urut_pilihan ? $request->urut_pilihan : null;
+		$verifikasi = $request->verifikasi ? $request->verifikasi : 'N';
+		$status_terima = $request->status_terima ? $request->status_terima : null;
+		// $status_konfirmasi = $request->status_konfirmasi ? $request->status_konfirmasi : null;
 		
 		if($searchText){
 			$param_keyword = " AND (calon.nama ilike '%".$searchText."%' OR calon.nisn ilike '%".$searchText."%' OR calon.nik ilike '%".$searchText."%')";
@@ -126,10 +365,34 @@ class CalonPesertaDidikController extends Controller
 		}else{
 			$param_jalur = "";
 		}
+		
+		if($urut_pilihan){
+			$param_pilihan = " AND pilihan.urut_pilihan = '".$urut_pilihan."'";
+		}else{
+			$param_pilihan = "";
+		}
+		
+		if($verifikasi == 'N'){
+			$param_diterima = " AND diterima.peserta_didik_id is null";
+		}else{
+			$param_diterima = " AND diterima.peserta_didik_id is not null";
+		}
+		
+		if($status_terima){
+			$param_status_terima = " AND diterima.status_terima = '".$status_terima."'";
+		}else{
+			$param_status_terima = "";
+		}
+		
+		// if($status_konfirmasi){
+		// 	$param_konf = " AND urutan.konfirmasi = '".$status_konfirmasi."'";
+		// }else{
+		// 	$param_konf = "";
+		// }
 
 		if($urut == 'jarak'){
 			$query_urut = " pilihan.jalur_id,
-							ppdb.calculate_distance(cast(calon.lintang as float), cast(calon.bujur as float), cast(sekolah.lintang as float), cast(sekolah.bujur as float), cast('K' as varchar(1))) ASC,
+							ppdb.calculate_distance(CAST ( (case when length(calon.lintang) > 1 then calon.lintang end) AS FLOAT ),CAST ( (case when length(calon.bujur) > 1 then calon.bujur end) AS FLOAT ), cast(sekolah.lintang as float), cast(sekolah.bujur as float), cast('Meter' as varchar(1))) ASC,
 							pilihan.urut_pilihan ASC,
 							urutan.urutan ASC
 						";
@@ -138,7 +401,7 @@ class CalonPesertaDidikController extends Controller
 							pilihan.jalur_id,
 							pilihan.urut_pilihan ASC,
 							urutan.urutan ASC,
-							ppdb.calculate_distance(cast(calon.lintang as float), cast(calon.bujur as float), cast(sekolah.lintang as float), cast(sekolah.bujur as float), cast('K' as varchar(1))) ASC
+							ppdb.calculate_distance(CAST ( (case when length(calon.lintang) > 1 then calon.lintang end) AS FLOAT ),CAST ( (case when length(calon.bujur) > 1 then calon.bujur end) AS FLOAT ), cast(sekolah.lintang as float), cast(sekolah.bujur as float), cast('Meter' as varchar(1))) ASC
 						";
 		}
 
@@ -177,13 +440,40 @@ class CalonPesertaDidikController extends Controller
 							pilihan_sekolah.jalur_id
 						) as urutan on urutan.sekolah_id = pilihan.sekolah_id
 						AND urutan.calon_peserta_didik_id = pilihan.calon_peserta_didik_id
+						LEFT JOIN ppdb.peserta_didik_diterima diterima on diterima.peserta_didik_id = calon.calon_peserta_didik_id and diterima.periode_kegiatan_id = calon.periode_kegiatan_id
+						LEFT JOIN pengguna on pengguna.pengguna_id = calon.pengguna_id
 					WHERE
 						pilihan.soft_delete = 0 
 						AND calon.soft_delete= 0
 						AND pilihan.sekolah_id = '{$sekolah_id}' 
+						AND urutan.konfirmasi = 1
 						{$param_keyword}
 						{$param_urut}
-						{$param_jalur}"; 
+						{$param_jalur}
+						{$param_pilihan}
+						{$param_diterima}
+						{$param_status_terima}
+						"; 
+		
+		// return "SELECT
+		// 	jalur.nama as jalur,
+		// 	calon.*,
+		// 	pilihan.jalur_id,
+		// 	pilihan.urut_pilihan,
+		// 	urutan.*,
+		// 	sekolah.lintang as lintang_sekolah, 
+		// 	sekolah.bujur as bujur_sekolah
+		// 	,ppdb.calculate_distance(
+		// 		cast(calon.lintang as float), 
+		// 		cast(calon.bujur as float), 
+		// 		cast(sekolah.lintang as float), 
+		// 		cast(sekolah.bujur as float), 
+		// 		cast('K' as varchar(1))
+		// 	) as jarak 
+		// {$query_body}
+		// ORDER BY
+		// {$query_urut}
+		// LIMIT {$limit} OFFSET {$start}";die;
 
 		$fetch = DB::connection('sqlsrv_2')->select(DB::raw("SELECT
 			jalur.nama as jalur,
@@ -192,12 +482,33 @@ class CalonPesertaDidikController extends Controller
 			pilihan.urut_pilihan,
 			urutan.*,
 			sekolah.lintang as lintang_sekolah, 
-			sekolah.bujur as bujur_sekolah,
-			ppdb.calculate_distance(cast(calon.lintang as float), cast(calon.bujur as float), cast(sekolah.lintang as float), cast(sekolah.bujur as float), cast('K' as varchar(1))) as jarak 
+			sekolah.bujur as bujur_sekolah
+			,ppdb.calculate_distance(
+				CAST ( (case when length(calon.lintang) > 1 then calon.lintang end) AS FLOAT ),
+				CAST ( (case when length(calon.bujur) > 1 then calon.bujur end) AS FLOAT ),
+				cast(sekolah.lintang as float), 
+				cast(sekolah.bujur as float), 
+				cast('Meter' as varchar(10))
+			) as jarak
+			,ppdb.calculate_distance(
+				CAST ( (case when length(calon.lintang) > 1 then calon.lintang end) AS FLOAT ),
+				CAST ( (case when length(calon.bujur) > 1 then calon.bujur end) AS FLOAT ),
+				cast(sekolah.lintang as float), 
+				cast(sekolah.bujur as float), 
+				cast('K' as varchar(1))
+			) as jarak_km,
+			diterima.peserta_didik_id as peserta_didik_id_diterima,
+			diterima.status_terima as status_terima,
+			pengguna.nama as pendaftar,
+			pengguna.username as email_pendaftar,
+			(case when diterima.sekolah_id = pilihan.sekolah_id then 'sekolah_sama' else 'sekolah_lain' end) as diterima_sekolah,
+			(case when diterima.sekolah_id = pilihan.sekolah_id then 'sekolah_sama' else (select nama from ppdb.sekolah where sekolah_id = diterima.sekolah_id) end) as sekolah_penerima 
 		{$query_body}
 		ORDER BY
 		{$query_urut}
 		LIMIT {$limit} OFFSET {$start}"));
+
+		// $diterima = 0;
 
 		for ($i=0; $i < sizeof($fetch); $i++) { 
 			//pas foto
@@ -243,6 +554,10 @@ class CalonPesertaDidikController extends Controller
 				$fetch[$i]->tanggal_konfirmasi = '-';
 			}
 
+			// if(($fetch[$i]->status_terima == 9 || $fetch[$i]->status_terima == 1) && $fetch[$i]->sekolah_penerima == 'sekolah_sama'){
+			// 	$diterima++;
+			// }
+
 			// $fetch[$i]->jarak = self::distance($fetch[$i]->lintang,$fetch[$i]->bujur,$fetch[$i]->lintang_sekolah,$fetch[$i]->bujur_sekolah);
 		}
 
@@ -250,6 +565,8 @@ class CalonPesertaDidikController extends Controller
 			[
 				'rows' => $fetch,
 				'count' => sizeof($fetch),
+				// 'count_diterima' => $diterima,
+				'count_diterima' => DB::connection('sqlsrv_2')->select(DB::raw("SELECT sum(case when diterima.status_terima in (1,9) and diterima.sekolah_id = pilihan.sekolah_id then 1 else 0 end) as diterima {$query_body}"))[0]->diterima,
 				'countAll' => DB::connection('sqlsrv_2')->select(DB::raw("SELECT sum(1) as total {$query_body}"))[0]->total
 			],
 			200
@@ -265,6 +582,7 @@ class CalonPesertaDidikController extends Controller
 	    $pengguna_id = $request->pengguna_id ? $request->pengguna_id : null;
 	    $sekolah_id = $request->sekolah_id ? $request->sekolah_id : null;
 	    $urut_pilihan = $request->urut_pilihan ? $request->urut_pilihan : null;
+	    $periode_kegiatan_id = $request->periode_kegiatan_id ? $request->periode_kegiatan_id : '2020';
 
 	    $count = CalonPD::where('ppdb.calon_peserta_didik.soft_delete', 0);
 		$calonPDs = CalonPD::where('ppdb.calon_peserta_didik.soft_delete', 0)
@@ -330,6 +648,9 @@ class CalonPesertaDidikController extends Controller
 			$sekolah = PilihanSekolah::where('pilihan_sekolah.calon_peserta_didik_id', $key->calon_peserta_didik_id)
 			->leftJoin('ppdb.sekolah AS sekolah', 'ppdb.pilihan_sekolah.sekolah_id', '=', 'sekolah.sekolah_id')
 			->leftJoin('ref.jalur AS jalur', 'ppdb.pilihan_sekolah.jalur_id', '=', 'jalur.jalur_id')
+			// ->leftJoin('ppdb.peserta_didik_diterima as diterima',)
+			// LEFT JOIN ppdb.peserta_didik_diterima diterima on diterima.peserta_didik_id = calon.calon_peserta_didik_id and diterima.periode_kegiatan_id = calon.periode_kegiatan_id
+			// LEFT JOIN pengguna on pengguna.pengguna_id = calon.pengguna_id
 			->leftJoin(
 				DB::raw('(
 					SELECT ROW_NUMBER
@@ -425,6 +746,26 @@ class CalonPesertaDidikController extends Controller
 				// $calonPDs[$i]->tingkat_pendidikan_id = $fetch_foto[0];
 			}else{
 				$calonPDs[$i]->sekolah_asal = [];
+			}
+
+			if($calon_peserta_didik_id){
+				//diterima atau belum
+				$fetch_foto = DB::connection('sqlsrv_2')
+				->table('ppdb.peserta_didik_diterima')
+				->where('peserta_didik_id','=',$key->calon_peserta_didik_id)
+				->where('periode_kegiatan_id','=',$periode_kegiatan_id)
+				->where('soft_delete','=',0)
+				->get();
+
+				if(sizeof($fetch_foto) > 0){
+					$calonPDs[$i]->peserta_didik_id_diterima = $fetch_foto[0]->peserta_didik_id;
+					$calonPDs[$i]->status_terima = $fetch_foto[0]->status_terima;
+					// $calonPDs[$i]->status_terima = $fetch_foto[0]->status_terima;
+					// $calonPDs[$i]->tingkat_pendidikan_id = $fetch_foto[0];
+				}else{
+					$calonPDs[$i]->peserta_didik_id_diterima = null;
+					$calonPDs[$i]->status_terima = null;
+				}
 			}
 
 			$i++;
