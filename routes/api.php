@@ -132,6 +132,11 @@ Route::prefix('JadwalKegiatan')->group(function(){
 	Route::get('beranda', 'JadwalKegiatanController@beranda');
 });
 
+Route::prefix('Kuota')->group(function(){
+	Route::post('sekolah', 'KuotaController@sekolah');
+	Route::post('save', 'KuotaController@save');
+});
+
 Route::get('/clear-cache', function() {
     Artisan::call('cache:clear');
     return "Cache is cleared";

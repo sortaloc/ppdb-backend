@@ -156,6 +156,8 @@ class DashboardController extends Controller
                 'kuota_sekolah.kuota_0500'
             )
             ->leftjoin('ppdb.kuota_sekolah AS kuota_sekolah', 'sekolah.sekolah_id', '=', 'kuota_sekolah.sekolah_id')
+            ->leftjoin('ppdb.pilihan_sekolah AS pilihan_sekolah', 'pilihan_sekolah.sekolah_id', '=', 'pilihan_sekolah.sekolah_id')
+            ->where('pilihan_sekolah.urut_pilihan', 1)
             ->where('sekolah.sekolah_id', $sekolah_id)
             ->first();
 
@@ -165,7 +167,7 @@ class DashboardController extends Controller
             ->select(
                 'jalur_id',
                 'nama',
-                DB::raw("(SELECT COUNT(calon_peserta_didik_id) FROM ppdb.pilihan_sekolah WHERE sekolah_id = '{$sekolah_id}' AND jalur_id = jalur.jalur_id) AS pendaftar")
+                DB::raw("(SELECT COUNT(calon_peserta_didik_id) FROM ppdb.pilihan_sekolah WHERE sekolah_id = '{$sekolah_id}' AND jalur_id = jalur.jalur_id AND urut_pilihan = '1') AS pendaftar")
             )
             ->orderBy('jalur_id')
             ->where('level_jalur', 1)
@@ -202,7 +204,7 @@ class DashboardController extends Controller
         return Response([
             'sekolah' => $sekolah,
             'pendaftar' => $kuota_pendaftar,
-            'pilihan_sekolah' => $pilihan_sekolah
+            'pilihan_sekolah' => $pilihan_sekolah,
         ], 200);
     }
 }
