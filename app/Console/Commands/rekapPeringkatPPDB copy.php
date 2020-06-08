@@ -12,7 +12,7 @@ class rekapPeringkatPPDB extends Command
      *
      * @var string
      */
-    protected $signature = 'rekap:peringkat_ppdb {--sekolah_id=0}';
+    protected $signature = 'rekap:peringkat_ppdb';
 
     /**
      * The console command description.
@@ -39,8 +39,6 @@ class rekapPeringkatPPDB extends Command
     public function handle()
     {
         // 0
-        $sekolah_id = $this->option('sekolah_id');
-
         $exe_0_00 = DB::connection('sqlsrv_2')->statement("WITH cte AS ( 
         SELECT ROW_NUMBER () OVER ( PARTITION BY peserta_didik_id ORDER BY status_terima ASC, last_update DESC ) AS urutan, * FROM ppdb.peserta_didik_diterima WHERE soft_delete = 0 ) 
         UPDATE ppdb.peserta_didik_diterima 
@@ -193,7 +191,7 @@ class rekapPeringkatPPDB extends Command
                                     () OVER (
                                             PARTITION BY pilihan.sekolah_id, pilihan.jalur_id
                                     ORDER BY
-                                            pilihan.urut_pilihan ASC,
+                                            -- pilihan.urut_pilihan ASC,
                                             ppdb.calculate_distance (
                                                     ( CASE WHEN LENGTH ( calons.lintang ) > 4 THEN CAST ( replace( substring(replace(REGEXP_REPLACE(concat(split_part(replace(replace(calons.lintang,'`',''),',','.'),'.',1),'.',split_part(replace(replace(calons.lintang,'`',''),',','.'),'.',2)),'[[:alpha:]]','','g'),'\"',''),1,10), ' ', '0' ) AS FLOAT ) END ),
                                                     ( CASE WHEN LENGTH ( calons.bujur ) > 4 THEN CAST ( replace( substring(replace(REGEXP_REPLACE(concat(split_part(replace(replace(calons.bujur,'`',''),',','.'),'.',1),'.',split_part(replace(replace(calons.bujur,'`',''),',','.'),'.',2)),'[[:alpha:]]','','g'),'\"',''),1,10), ' ', '0' ) AS FLOAT ) END ),
@@ -241,7 +239,6 @@ class rekapPeringkatPPDB extends Command
                                     AND calons.soft_delete = 0 
                                     AND pilihan.jalur_id = '0400'
                                     AND pilihan.calon_peserta_didik_id not in (select calon_peserta_didik_id from rekap.peringkat_ppdb_tahap_1_2)
-                                    ".($sekolah_id ? "AND pilihan.sekolah_id = '".$sekolah_id."'" : "")."
                             ) ranking_sekolah on ranking_sekolah.calon_peserta_didik_id = ppdb.pilihan_sekolah.calon_peserta_didik_id 
                             AND ranking_sekolah.sekolah_id = ppdb.pilihan_sekolah.sekolah_id
                             JOIN (
@@ -286,7 +283,7 @@ class rekapPeringkatPPDB extends Command
                             AND ranking_diri.sekolah_id = ppdb.pilihan_sekolah.sekolah_id
                             WHERE
                                     ppdb.pilihan_sekolah.soft_delete = 0
-                	        AND ranking_sekolah.ranking_sekolah <= ranking_sekolah.kuota
+                	        -- AND ranking_sekolah.ranking_sekolah <= ranking_sekolah.kuota
                 -- 			AND ranking_diri.ranking_diri = 1
                             ) ranking_zonasi on ranking_zonasi.calon_peserta_didik_id = calon.calon_peserta_didik_id 
                 -- 			AND ranking_zonasi.urut_dipilih = 1
@@ -362,7 +359,6 @@ class rekapPeringkatPPDB extends Command
                                     AND calons.soft_delete = 0 
                                     AND pilihan.jalur_id = '0100'
                                     AND pilihan.calon_peserta_didik_id not in (select calon_peserta_didik_id from rekap.peringkat_ppdb_tahap_1_2)
-                                    ".($sekolah_id ? "AND pilihan.sekolah_id = '".$sekolah_id."'" : "")."
                             ) ranking_sekolah on ranking_sekolah.calon_peserta_didik_id = ppdb.pilihan_sekolah.calon_peserta_didik_id 
                             AND ranking_sekolah.sekolah_id = ppdb.pilihan_sekolah.sekolah_id
                             JOIN (
@@ -482,7 +478,6 @@ class rekapPeringkatPPDB extends Command
                                     AND calons.soft_delete = 0 
                                     AND pilihan.jalur_id = '0200'
                                     AND pilihan.calon_peserta_didik_id not in (select calon_peserta_didik_id from rekap.peringkat_ppdb_tahap_1_2)
-                                    ".($sekolah_id ? "AND pilihan.sekolah_id = '".$sekolah_id."'" : "")."
                             ) ranking_sekolah on ranking_sekolah.calon_peserta_didik_id = ppdb.pilihan_sekolah.calon_peserta_didik_id 
                             AND ranking_sekolah.sekolah_id = ppdb.pilihan_sekolah.sekolah_id
                             JOIN (
@@ -601,7 +596,6 @@ class rekapPeringkatPPDB extends Command
                                     AND calons.soft_delete = 0 
                                     AND pilihan.jalur_id IN ('0300')
                                     AND pilihan.calon_peserta_didik_id not in (select calon_peserta_didik_id from rekap.peringkat_ppdb_tahap_1_2)
-                                    ".($sekolah_id ? "AND pilihan.sekolah_id = '".$sekolah_id."'" : "")."
                             ) ranking_sekolah on ranking_sekolah.calon_peserta_didik_id = ppdb.pilihan_sekolah.calon_peserta_didik_id 
                             AND ranking_sekolah.sekolah_id = ppdb.pilihan_sekolah.sekolah_id
                             JOIN (
@@ -720,7 +714,6 @@ class rekapPeringkatPPDB extends Command
                                     AND calons.soft_delete = 0 
                                     AND pilihan.jalur_id IN ('0500')
                                     AND pilihan.calon_peserta_didik_id not in (select calon_peserta_didik_id from rekap.peringkat_ppdb_tahap_1_2)
-                                    ".($sekolah_id ? "AND pilihan.sekolah_id = '".$sekolah_id."'" : "")."
                             ) ranking_sekolah on ranking_sekolah.calon_peserta_didik_id = ppdb.pilihan_sekolah.calon_peserta_didik_id 
                             AND ranking_sekolah.sekolah_id = ppdb.pilihan_sekolah.sekolah_id
                             JOIN (
@@ -905,47 +898,28 @@ class rekapPeringkatPPDB extends Command
         }
 
         // 4
-        // $exe_4_0 = DB::connection('sqlsrv_2')->statement("DROP TABLE IF EXISTS rekap.peringkat_ppdb_tahap_1_2");
-        $exe_4_0 = DB::connection('sqlsrv_2')->statement("
-        CREATE TABLE IF NOT EXISTS rekap.peringkat_ppdb_tahap_1_2 (
-            urutan_diambil int8,
-            calon_peserta_didik_id uuid NOT NULL,
-            nama varchar(255) COLLATE pg_catalog.default,
-            jalur_id varchar COLLATE pg_catalog.default,
-            nama_jalur varchar COLLATE pg_catalog.default,
-            no_urut_final int8,
-            status_final text COLLATE pg_catalog.default,
-            sekolah_id uuid,
-            sekolah_penerima varchar COLLATE pg_catalog.default,
-            no_urut_penerimaan int8,
-            kuota_sekolah int4,
-            jarak float8,
-            jarak_km float8,
-            rd int8,
-            urut_dipilih int8,
-            tanggal_rekap timestamptz(6)
-          )
-        ");
-        $exe_4_1 = DB::connection('sqlsrv_2')->statement("INSERT INTO rekap.peringkat_ppdb_tahap_1_2 (select
+        $exe_4_0 = DB::connection('sqlsrv_2')->statement("DROP TABLE IF EXISTS rekap.peringkat_ppdb_tahap_1_2");
+        $exe_4_1 = DB::connection('sqlsrv_2')->statement("select
                                                             *
-                                                        from rekap.peringkat_ppdb_tahap_1_masuk_diambil)");
-        // $exe_4_2 = DB::connection('sqlsrv_2')->statement("ALTER TABLE rekap.peringkat_ppdb_tahap_1_2 
-        //                                                 ADD PRIMARY KEY (calon_peserta_didik_id)");
+                                                        INTO rekap.peringkat_ppdb_tahap_1_2
+                                                        from rekap.peringkat_ppdb_tahap_1_masuk_diambil");
+        $exe_4_2 = DB::connection('sqlsrv_2')->statement("ALTER TABLE rekap.peringkat_ppdb_tahap_1_2 
+                                                        ADD PRIMARY KEY (calon_peserta_didik_id)");
         if($exe_4_0){
-            echo "[".date('Y-m-d H:i:s')."] [BERHASIL] CREATE TABLE IF NOT EXISTS rekap.peringkat_ppdb_tahap_1_2 ...".PHP_EOL;
+            echo "[".date('Y-m-d H:i:s')."] [BERHASIL] DROP table IF EXISTS rekap.peringkat_ppdb_tahap_1_2 ...".PHP_EOL;
         }else{
-            echo "[".date('Y-m-d H:i:s')."] [GAGAL] REATE TABLE IF NOT EXISTS rekap.peringkat_ppdb_tahap_1_2 ...".PHP_EOL;
+            echo "[".date('Y-m-d H:i:s')."] [GAGAL] DROP table IF EXISTS rekap.peringkat_ppdb_tahap_1_2 ...".PHP_EOL;
         }
         if($exe_4_1){
             echo "[".date('Y-m-d H:i:s')."] [BERHASIL] INSERT DATA INTO rekap.peringkat_ppdb_tahap_1_2 ...".PHP_EOL;
         }else{
             echo "[".date('Y-m-d H:i:s')."] [GAGAL] INSERT DATA INTO rekap.peringkat_ppdb_tahap_1_2 ...".PHP_EOL;
         }
-        // if($exe_4_2){
-        //     echo "[".date('Y-m-d H:i:s')."] [BERHASIL] ADD PRIMARY KEY rekap.peringkat_ppdb_tahap_1_2 ...".PHP_EOL;
-        // }else{
-        //     echo "[".date('Y-m-d H:i:s')."] [GAGAL] ADD PRIMARY KEY rekap.peringkat_ppdb_tahap_1_2 ...".PHP_EOL;
-        // }
+        if($exe_4_2){
+            echo "[".date('Y-m-d H:i:s')."] [BERHASIL] ADD PRIMARY KEY rekap.peringkat_ppdb_tahap_1_2 ...".PHP_EOL;
+        }else{
+            echo "[".date('Y-m-d H:i:s')."] [GAGAL] ADD PRIMARY KEY rekap.peringkat_ppdb_tahap_1_2 ...".PHP_EOL;
+        }
 
         // 5
         $exe_5_0 = DB::connection('sqlsrv_2')->statement("DROP TABLE IF EXISTS rekap.sisa_kuota_tahap_1");
@@ -1870,7 +1844,6 @@ class rekapPeringkatPPDB extends Command
                             AND calons.soft_delete = 0 
                             AND pilihan.jalur_id = '0400'
                             AND pilihan.calon_peserta_didik_id not in (select calon_peserta_didik_id from rekap.peringkat_ppdb_tahap_1_2)
-                            ".($sekolah_id ? "AND pilihan.sekolah_id = '".$sekolah_id."'" : "")."
                     ) ranking_sekolah on ranking_sekolah.calon_peserta_didik_id = ppdb.pilihan_sekolah.calon_peserta_didik_id 
                     AND ranking_sekolah.sekolah_id = ppdb.pilihan_sekolah.sekolah_id
                     JOIN (
@@ -2000,7 +1973,6 @@ class rekapPeringkatPPDB extends Command
                             AND calons.soft_delete = 0 
                             AND pilihan.jalur_id = '0100'
                             AND pilihan.calon_peserta_didik_id not in (select calon_peserta_didik_id from rekap.peringkat_ppdb_tahap_1_2)
-                            ".($sekolah_id ? "AND pilihan.sekolah_id = '".$sekolah_id."'" : "")."
                     ) ranking_sekolah on ranking_sekolah.calon_peserta_didik_id = ppdb.pilihan_sekolah.calon_peserta_didik_id 
                     AND ranking_sekolah.sekolah_id = ppdb.pilihan_sekolah.sekolah_id
                     JOIN (
@@ -2131,7 +2103,6 @@ class rekapPeringkatPPDB extends Command
                             AND calons.soft_delete = 0 
                             AND pilihan.jalur_id = '0200'
                             AND pilihan.calon_peserta_didik_id not in (select calon_peserta_didik_id from rekap.peringkat_ppdb_tahap_1_2)
-                            ".($sekolah_id ? "AND pilihan.sekolah_id = '".$sekolah_id."'" : "")."
                     ) ranking_sekolah on ranking_sekolah.calon_peserta_didik_id = ppdb.pilihan_sekolah.calon_peserta_didik_id 
                     AND ranking_sekolah.sekolah_id = ppdb.pilihan_sekolah.sekolah_id
                     JOIN (
@@ -2262,7 +2233,6 @@ class rekapPeringkatPPDB extends Command
                             AND calons.soft_delete = 0 
                             AND pilihan.jalur_id IN ('0300')
                             AND pilihan.calon_peserta_didik_id not in (select calon_peserta_didik_id from rekap.peringkat_ppdb_tahap_1_2)
-                            ".($sekolah_id ? "AND pilihan.sekolah_id = '".$sekolah_id."'" : "")."
                     ) ranking_sekolah on ranking_sekolah.calon_peserta_didik_id = ppdb.pilihan_sekolah.calon_peserta_didik_id 
                     AND ranking_sekolah.sekolah_id = ppdb.pilihan_sekolah.sekolah_id
                     JOIN (
@@ -2394,7 +2364,6 @@ class rekapPeringkatPPDB extends Command
                             AND calons.soft_delete = 0 
                             AND pilihan.jalur_id IN ('0500')
                             AND pilihan.calon_peserta_didik_id not in (select calon_peserta_didik_id from rekap.peringkat_ppdb_tahap_1_2)
-                            ".($sekolah_id ? "AND pilihan.sekolah_id = '".$sekolah_id."'" : "")."
                     ) ranking_sekolah on ranking_sekolah.calon_peserta_didik_id = ppdb.pilihan_sekolah.calon_peserta_didik_id 
                     AND ranking_sekolah.sekolah_id = ppdb.pilihan_sekolah.sekolah_id
                     JOIN (

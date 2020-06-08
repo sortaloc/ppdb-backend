@@ -31,6 +31,8 @@ class Cors
             "http://sioman.nufaza.co.id:8090",
             "http://portal-disdiklmj.web.id",
             "http://ppdb-malukutengah.diskuis.id",
+            "http://ppdb-malukutengah-dinas.diskuis.id",
+            "http://ppdb-malukutengah-sekolah.diskuis.id",
             "*",
             null
         ];

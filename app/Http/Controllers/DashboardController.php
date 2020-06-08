@@ -84,7 +84,29 @@ class DashboardController extends Controller
         // Widget
         $kuota = DB::connection('sqlsrv_2')->table('ppdb.kuota_sekolah')->select(DB::raw('SUM(kuota) AS jumlah_kuota'))->get();
         $kuota_terima = 0;
-        $kuota_pendaftar = DB::connection('sqlsrv_2')->table('ppdb.pilihan_sekolah')->where('soft_delete', 0)->count();
+        $kuota_pendaftar = DB::connection('sqlsrv_2')
+                            ->table('ppdb.pilihan_sekolah')
+                            ->join('ppdb.sekolah as sekolah','sekolah.sekolah_id','=','ppdb.pilihan_sekolah.sekolah_id')
+                            ->join(DB::raw("(SELECT
+                                calon_peserta_didik_id,
+                                concat ( LEFT ( sekolah.kode_wilayah, 4 ), '00' ) AS kode_kab,
+                                ppdb.pilihan_sekolah.jalur_id 
+                            FROM
+                                ppdb.pilihan_sekolah
+                                JOIN ppdb.sekolah sekolah ON sekolah.sekolah_id = ppdb.pilihan_sekolah.sekolah_id 
+                            WHERE
+                                ppdb.pilihan_sekolah.soft_delete = 0 
+                                AND sekolah.soft_delete = 0 
+                                AND LEFT ( sekolah.kode_wilayah, 4 ) = '2101' 
+                            GROUP BY
+                                calon_peserta_didik_id,
+                                LEFT ( sekolah.kode_wilayah, 4 ),
+                                ppdb.pilihan_sekolah.jalur_id) as pilihan_sekolahnya"),'pilihan_sekolahnya.calon_peserta_didik_id','=','ppdb.pilihan_sekolah.calon_peserta_didik_id')
+                            ->where('ppdb.pilihan_sekolah.urut_pilihan','=', 1)
+                            ->where('ppdb.pilihan_sekolah.soft_delete', 0)
+                            ->where('sekolah.soft_delete', 0)
+                            ->where('pilihan_sekolahnya.kode_kab','=',$kode_wilayah)
+                            ->count();
 
         $kuota_chart = [
             'label' => ['Kuota', 'Pendaftar', 'Terima'],

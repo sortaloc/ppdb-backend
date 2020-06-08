@@ -122,6 +122,7 @@ Route::prefix('CalonPesertaDidik')->group(function(){
 	Route::post('simpanPesertaDidikDiterima', 'CalonPesertaDidikController@simpanPesertaDidikDiterima'); // params: { 'kolom2_calon_pd' }
 	Route::get('PeringkatPesertaDidik', 'CalonPesertaDidikController@PeringkatPesertaDidik'); // params: { 'kolom2_calon_pd' }
 	Route::get('RekapKuotaSekolah', 'CalonPesertaDidikController@RekapKuotaSekolah'); // params: { 'kolom2_calon_pd' }
+	Route::get('daftarPesertaDidikDiterima', 'CalonPesertaDidikController@daftarPesertaDidikDiterima'); // params: { 'kolom2_calon_pd' }
 });
 
 Route::prefix('BerkasCalon')->group(function(){
