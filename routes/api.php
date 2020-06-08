@@ -123,6 +123,9 @@ Route::prefix('CalonPesertaDidik')->group(function(){
 	Route::get('PeringkatPesertaDidik', 'CalonPesertaDidikController@PeringkatPesertaDidik'); // params: { 'kolom2_calon_pd' }
 	Route::get('RekapKuotaSekolah', 'CalonPesertaDidikController@RekapKuotaSekolah'); // params: { 'kolom2_calon_pd' }
 	Route::get('daftarPesertaDidikDiterima', 'CalonPesertaDidikController@daftarPesertaDidikDiterima'); // params: { 'kolom2_calon_pd' }
+
+	// EXCEL
+	Route::get('getCalonPesertaDidikSekolah_excel', 'CalonPesertaDidikController@getCalonPesertaDidikSekolah_excel');
 });
 
 Route::prefix('BerkasCalon')->group(function(){
@@ -134,6 +137,11 @@ Route::prefix('JadwalKegiatan')->group(function(){
 	Route::post('simpanLintangBujur', 'JadwalKegiatanController@store');
 	Route::get('delete/{id}', 'JadwalKegiatanController@destroy');
 	Route::get('beranda', 'JadwalKegiatanController@beranda');
+});
+
+Route::prefix('Kuota')->group(function(){
+	Route::post('sekolah', 'KuotaController@sekolah');
+	Route::post('save', 'KuotaController@save');
 });
 
 Route::get('/clear-cache', function() {

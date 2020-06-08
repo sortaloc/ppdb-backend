@@ -531,7 +531,30 @@ class CalonPesertaDidikController extends Controller
 		}
 	}
 
-	public function getCalonPesertaDidikSekolah(Request $request){
+	public function getCalonPesertaDidikSekolah(Request $request)
+	{
+		$return = $this->getCalonPesertaDidikSekolah__($request);
+		return $return;
+	}
+
+	public function getCalonPesertaDidikSekolah_excel(Request $request)
+	{
+		$calonPD = $this->getCalonPesertaDidikSekolah__($request);
+		$sekolah = DB::connection('sqlsrv_2')
+			->table('ppdb.sekolah AS sekolah')
+			->select(
+				'sekolah.*',
+				'kuota_sekolah.kuota'
+			)
+			->leftJoin('ppdb.kuota_sekolah AS kuota_sekolah', 'sekolah.sekolah_id', '=', 'kuota_sekolah.sekolah_id')
+			->where('sekolah.sekolah_id', $request->sekolah_id)
+			->where('sekolah.soft_delete', 0)
+			->first();
+
+		return view('excel/PPDB_calonPesertaDidik_sekolah', ['return' => $calonPD, 'sekolah' => $sekolah]);
+	}
+
+	public function getCalonPesertaDidikSekolah__($request){
 		$limit = $request->limit ? $request->limit : 20;
 	    $start = $request->start ? $request->start : 0;
 		$sekolah_id = $request->sekolah_id ? $request->sekolah_id : null;
@@ -771,16 +794,13 @@ class CalonPesertaDidikController extends Controller
 			// $fetch[$i]->jarak = self::distance($fetch[$i]->lintang,$fetch[$i]->bujur,$fetch[$i]->lintang_sekolah,$fetch[$i]->bujur_sekolah);
 		}
 
-		return response(
-			[
-				'rows' => $fetch,
-				'count' => sizeof($fetch),
-				// 'count_diterima' => $diterima,
-				'count_diterima' => DB::connection('sqlsrv_2')->select(DB::raw("SELECT sum(case when diterima.status_terima in (1,9) and diterima.sekolah_id = pilihan.sekolah_id then 1 else 0 end) as diterima {$query_body}"))[0]->diterima,
-				'countAll' => DB::connection('sqlsrv_2')->select(DB::raw("SELECT sum(1) as total {$query_body}"))[0]->total
-			],
-			200
-		);
+		return $return = [
+			'rows' => $fetch,
+			'count' => sizeof($fetch),
+			// 'count_diterima' => $diterima,
+			'count_diterima' => DB::connection('sqlsrv_2')->select(DB::raw("SELECT sum(case when diterima.status_terima in (1,9) and diterima.sekolah_id = pilihan.sekolah_id then 1 else 0 end) as diterima {$query_body}"))[0]->diterima,
+			'countAll' => DB::connection('sqlsrv_2')->select(DB::raw("SELECT sum(1) as total {$query_body}"))[0]->total
+		];
 	}
 	
 	public function index(Request $request)
