@@ -126,6 +126,7 @@ Route::prefix('CalonPesertaDidik')->group(function(){
 
 	// EXCEL
 	Route::get('getCalonPesertaDidikSekolah_excel', 'CalonPesertaDidikController@getCalonPesertaDidikSekolah_excel');
+	Route::get('PeringkatPesertaDidik_excel', 'CalonPesertaDidikController@PeringkatPesertaDidik_excel');
 });
 
 Route::prefix('BerkasCalon')->group(function(){

@@ -126,7 +126,31 @@ class CalonPesertaDidikController extends Controller
 		);
 	}
 
-	public function PeringkatPesertaDidik(Request $request){
+	public function PeringkatPesertaDidik(Request $request)
+	{
+		$return = $this->PeringkatPesertaDidik__($request);
+
+		return Response($return, 200);
+	}
+
+	public function PeringkatPesertaDidik_excel(Request $request)
+	{
+		if(!$request->sekolah_id) return ['params' => false];
+
+		$rows = $this->PeringkatPesertaDidik__($request);
+		$sekolah = DB::connection('sqlsrv_2')
+			->table("ppdb.sekolah AS sekolah")
+			->select('sekolah.*', 'kuota_sekolah.kuota')
+			->leftJoin('ppdb.kuota_sekolah AS kuota_sekolah', 'sekolah.sekolah_id', '=', 'kuota_sekolah.sekolah_id')
+			->where('sekolah.sekolah_id', $request->sekolah_id)
+			->first();
+
+		if(!$sekolah) return ['status' => 'sekolah tidak ditemukan'];
+		$return = ['rows' => $rows, 'sekolah' => $sekolah];
+		return view('excel/PPDB_calonPesertaDidik_terima', $return);
+	}
+
+	public function PeringkatPesertaDidik__($request){
 		$sekolah_id = $request->sekolah_id ? $request->sekolah_id : null;
 		$limit = $request->limit ? $request->limit : 20;
 		$start = $request->start ? $request->start : 0;
@@ -330,14 +354,11 @@ class CalonPesertaDidikController extends Controller
 		}
 		
 
-		return response(
-			[
+		return [
 				'rows' => $fetch,
 				'count' => sizeof($fetch),
 				'countAll' => $fetch_count[0]->total
-			],
-			200
-		);
+			];
 
 	}
 
